@@ -7,6 +7,8 @@ import {
   $createParagraphNode,
   $getNearestNodeFromDOMNode,
   $createTextNode,
+  $getSelection,
+  $isRangeSelection,
   COMMAND_PRIORITY_LOW,
   type LexicalEditor,
 } from 'lexical';
@@ -64,13 +66,14 @@ export function useBlockMenuPlugin(
       newParagraph.append(textNode);
       node.insertAfter(newParagraph);
       
-      // 使用 setTimeout 确保 DOM 更新后再聚焦
-      setTimeout(() => {
-        editor.update(() => {
-          textNode.select();
-        });
-      }, 0);
+      // 立即选择新段落（在同一个 update 中完成）
+      newParagraph.selectStart();
     });
+    
+    // 使用 setTimeout 确保 DOM 更新后编辑器获得焦点
+    setTimeout(() => {
+      editor.focus();
+    }, 0);
   };
 
   // 更新菜单位置
@@ -116,7 +119,7 @@ export function useBlockMenuPlugin(
 
     // 只选择顶级 block，不包括列表项（li）和嵌套列表
     const allBlocks = editorElement.querySelectorAll(
-      'p, h1, h2, h3, ul, ol, blockquote, hr',
+      'p, h1, h2, h3, ul, ol, blockquote, hr, code',
     );
     const topLevelBlocks = Array.from(allBlocks).filter((block) => {
       // 如果 block 是 li，跳过（列表项不应该有 controller）
@@ -167,7 +170,7 @@ export function useBlockMenuPlugin(
     // 只选择顶级 block，不包括列表项（li）
     // 列表（ul/ol）作为一个整体 block，列表项（li）不应该有独立的 controller
     const blocks = editorElement.querySelectorAll(
-      'p, h1, h2, h3, ul, ol, blockquote, hr',
+      'p, h1, h2, h3, ul, ol, blockquote, hr, code',
     );
     
     // 过滤掉列表项（li），只保留顶级 block

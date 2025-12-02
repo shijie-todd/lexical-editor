@@ -2,10 +2,7 @@
 import { ref } from 'vue'
 import Editor from './Editor.vue'
 
-const content = ref(`
-# 一级
-
-## 二级 `)
+const content = ref('你好！这是一段测试文本')
 </script>
 
 <template>

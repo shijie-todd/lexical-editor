@@ -1,21 +1,23 @@
 /**
  * 自定义 Markdown Transformers
- * 用于支持 ImageNode 和 HorizontalRuleNode
+ * 用于支持 ImageNode、HorizontalRuleNode 和下划线格式
  */
 
-import type {ElementTransformer} from '@lexical/markdown';
+import type {ElementTransformer, TextFormatTransformer} from '@lexical/markdown';
 import {
   HEADING,
   ORDERED_LIST,
   QUOTE,
   UNORDERED_LIST,
   CHECK_LIST,
+  CODE,
   BOLD_STAR,
   BOLD_UNDERSCORE,
   ITALIC_STAR,
   ITALIC_UNDERSCORE,
   INLINE_CODE,
   STRIKETHROUGH,
+  LINK,
 } from '@lexical/markdown';
 import {$createImageNode, $isImageNode, ImageNode} from '../nodes/ImageNode';
 import {
@@ -44,6 +46,17 @@ export const HORIZONTAL_RULE: ElementTransformer = {
     hrNode.selectNext();
   },
   type: 'element',
+};
+
+/**
+ * Underline Transformer
+ * 支持 `++text++` 格式转换为下划线
+ * 注意：这是自定义语法，不是标准 Markdown
+ */
+export const UNDERLINE: TextFormatTransformer = {
+  format: ['underline'],
+  tag: '++',
+  type: 'text-format',
 };
 
 /**
@@ -88,20 +101,29 @@ export const IMAGE: ElementTransformer = {
 /**
  * 自定义 Transformers 集合
  * 包含所有需要的 transformers
+ * 
+ * 注意：文本格式 transformer 的顺序很重要：
+ * - 行内代码应该放在最前面，因为它会阻止内部的转换
+ * - 更长的标签应该在更短的标签之前（如 ** 或 __ 应该在 * 或 _ 之前）
  */
 export const CUSTOM_TRANSFORMERS = [
+  // 块级元素 transformers
   HEADING,
   QUOTE,
+  CODE,               // 代码块（```code```）
   ORDERED_LIST,
   UNORDERED_LIST,
   CHECK_LIST,
   HORIZONTAL_RULE,
   IMAGE,
-  BOLD_STAR,
-  BOLD_UNDERSCORE,
-  ITALIC_STAR,
-  ITALIC_UNDERSCORE,
-  INLINE_CODE,
-  STRIKETHROUGH,
+  LINK,
+  // 文本格式 transformers（按优先级排序）
+  INLINE_CODE,        // `行内代码` - 优先，避免内部转换
+  BOLD_STAR,          // **粗体**
+  BOLD_UNDERSCORE,    // __粗体__
+  ITALIC_STAR,        // *斜体*
+  ITALIC_UNDERSCORE,  // _斜体_
+  STRIKETHROUGH,      // ~~删除线~~
+  UNDERLINE,          // ++下划线++（自定义）
 ];
 

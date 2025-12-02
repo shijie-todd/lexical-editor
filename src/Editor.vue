@@ -17,6 +17,8 @@ import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { createEditor, $getRoot, $createParagraphNode } from 'lexical';
 import { HeadingNode, QuoteNode, registerRichText } from '@lexical/rich-text';
 import { ListNode, ListItemNode, registerCheckList } from '@lexical/list';
+import { LinkNode, AutoLinkNode, TOGGLE_LINK_COMMAND, $toggleLink } from '@lexical/link';
+import { CodeNode, CodeHighlightNode } from '@lexical/code';
 import { ParagraphNode, TextNode } from 'lexical';
 import { HorizontalRuleNode } from './nodes/HorizontalRuleNode';
 import { ImageNode } from './nodes/ImageNode';
@@ -25,6 +27,10 @@ import { useComponentPickerPlugin } from './plugins/ComponentPickerPlugin';
 import { useBlockMenuPlugin } from './plugins/BlockMenuPlugin';
 import { useListPlugin } from './plugins/ListPlugin';
 import { useDragDropPastePlugin } from './plugins/DragDropPastePlugin';
+import { useFloatingTextFormatToolbarPlugin } from './plugins/FloatingTextFormatToolbarPlugin';
+import { useFloatingLinkEditorPlugin } from './plugins/FloatingLinkEditorPlugin';
+import { useClearFormatOnEnterPlugin } from './plugins/ClearFormatOnEnterPlugin';
+import { useCodeBlockExitPlugin } from './plugins/CodeBlockExitPlugin';
 import { fileToBase64 } from './utils/imageUpload';
 import {
   $convertFromMarkdownString,
@@ -52,9 +58,16 @@ let cleanupPicker: (() => void) | undefined;
 let cleanupBlockMenu: (() => void) | undefined;
 let cleanupListPlugin: (() => void) | undefined;
 let cleanupDragDropPaste: (() => void) | undefined;
+let cleanupFloatingToolbar: (() => void) | undefined;
+let cleanupLinkEditor: (() => void) | undefined;
+let cleanupClearFormatOnEnter: (() => void) | undefined;
+let cleanupCodeBlockExit: (() => void) | undefined;
 
 // 用于防止循环更新的标志
 let isUpdatingFromProps = false;
+
+// 链接编辑模式状态
+const isLinkEditMode = ref(false);
 
 const theme = {
   paragraph: 'editor-paragraph',
@@ -73,6 +86,8 @@ const theme = {
       'editor-list-ol5',
     ],
     listitem: 'editor-list-item',
+    listitemChecked: 'editor-listitem-checked',
+    listitemUnchecked: 'editor-listitem-unchecked',
     nested: {
       listitem: 'editor-nested-list-item',
     },
@@ -82,6 +97,7 @@ const theme = {
   quote: 'editor-quote',
   hr: 'editor-hr',
   image: 'editor-image',
+  code: 'editor-code',
   text: {
     bold: 'editor-text-bold',
     italic: 'editor-text-italic',
@@ -99,6 +115,10 @@ const getEditorConfig = () => {
       HeadingNode,
       ListNode,
       ListItemNode,
+      LinkNode,
+      AutoLinkNode,
+      CodeNode,
+      CodeHighlightNode,
       ParagraphNode,
       TextNode,
       QuoteNode,
@@ -119,6 +139,26 @@ const initEditor = () => {
 
   // 注册 RichText 功能
   registerRichText(editor.value);
+
+
+  // 注册链接命令处理器
+  editor.value.registerCommand(
+    TOGGLE_LINK_COMMAND,
+    (payload: string | { url: string; target?: string; rel?: string; title?: string } | null) => {
+      editor.value.update(() => {
+        if (payload === null) {
+          $toggleLink(null);
+        } else if (typeof payload === 'string') {
+          $toggleLink(payload);
+        } else {
+          const { url, target, rel, title } = payload;
+          $toggleLink(url, { target, rel, title });
+        }
+      });
+      return true;
+    },
+    0, // COMMAND_PRIORITY_LOW
+  );
 
   // 初始化编辑器状态
   editor.value.update(() => {
@@ -174,6 +214,29 @@ const initEditor = () => {
   // 注册 Checklist 功能
   registerCheckList(editor.value);
 
+  // 回车清除格式插件（按回车时不继承文本格式）
+  cleanupClearFormatOnEnter = useClearFormatOnEnterPlugin(editor.value);
+
+  // 代码块退出插件（在代码块空行按回车时退出）
+  cleanupCodeBlockExit = useCodeBlockExitPlugin(editor.value);
+
+  // 浮动文本格式工具栏（包含链接按钮）
+  if (!props.readonly) {
+    cleanupFloatingToolbar = useFloatingTextFormatToolbarPlugin(editor.value, {
+      setIsLinkEditMode: (value: boolean) => {
+        isLinkEditMode.value = value;
+      },
+    });
+
+    // 浮动链接编辑器
+    cleanupLinkEditor = useFloatingLinkEditorPlugin(editor.value, {
+      getIsLinkEditMode: () => isLinkEditMode.value,
+      setIsLinkEditMode: (value: boolean) => {
+        isLinkEditMode.value = value;
+      },
+    });
+  }
+
   // 设置只读模式
   if (props.readonly) {
     editor.value.setEditable(false);
@@ -211,6 +274,10 @@ onUnmounted(() => {
   cleanupBlockMenu?.();
   cleanupListPlugin?.();
   cleanupDragDropPaste?.();
+  cleanupFloatingToolbar?.();
+  cleanupLinkEditor?.();
+  cleanupClearFormatOnEnter?.();
+  cleanupCodeBlockExit?.();
   editor.value?.setRootElement(null);
 });
 
@@ -255,6 +322,16 @@ watch(
   },
 );
 
+// 监听 isLinkEditMode 变化，触发编辑器更新
+watch(isLinkEditMode, () => {
+  if (editor.value) {
+    // 触发编辑器状态更新以重新渲染链接编辑器
+    editor.value.getEditorState().read(() => {
+      // 仅触发更新
+    });
+  }
+});
+
 onMounted(() => {
   initEditor();
 });
@@ -297,52 +374,5 @@ onMounted(() => {
   user-select: text;
 }
 
-/* 主题样式已移至 src/styles/editor.scss */
-</style>
-
-<style>
-/* 全局样式 - Slash Command Menu */
-.typeahead-popover.component-picker-menu {
-  position: absolute;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-  max-height: 250px;
-  overflow-y: auto;
-  min-width: 200px;
-  color: #333;
-}
-
-.typeahead-popover.component-picker-menu ul {
-  list-style: none;
-  margin: 0;
-  padding: 4px;
-  color: #333;
-}
-
-.component-picker-item {
-  padding: 8px 12px;
-  cursor: pointer;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #333;
-  font-size: 14px;
-}
-
-.component-picker-item:hover,
-.component-picker-item.selected {
-  background-color: #f0f0f0;
-  color: #1a1a1a;
-}
-
-.component-picker-item .text {
-  flex: 1;
-  color: inherit;
-}
-
-/* Block Menu 样式已移至 src/styles/editor.scss */
+/* 全局样式（主题样式、工具栏样式等）已移至 src/styles/editor.scss */
 </style>

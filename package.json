@@ -9,8 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lexical/code": "^0.38.2",
     "@lexical/extension": "^0.38.2",
     "@lexical/html": "^0.38.2",
+    "@lexical/link": "^0.38.2",
     "@lexical/list": "^0.38.2",
     "@lexical/markdown": "^0.38.2",
     "@lexical/rich-text": "^0.38.2",

@@ -9,11 +9,14 @@ import {
 } from '@lexical/list';
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
+import { $createCodeNode, $isCodeNode } from '@lexical/code';
 import {
   $createParagraphNode,
+  $createTextNode,
   $getSelection,
   $isRangeSelection,
   $isRootOrShadowRoot,
+  $isTextNode,
   COMMAND_PRIORITY_LOW,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_UP_COMMAND,
@@ -28,9 +31,23 @@ import { $createHorizontalRuleNode } from '../nodes/HorizontalRuleNode';
 import { INSERT_IMAGE_COMMAND, type ImageUploadHandler } from './ImagesPlugin';
 import { fileToBase64 } from '../utils/imageUpload';
 
+// 导入 SVG 图标
+import textIcon from '../assets/text.svg';
+import heading1Icon from '../assets/heading1.svg';
+import heading2Icon from '../assets/heading2.svg';
+import heading3Icon from '../assets/heading3.svg';
+import orderListIcon from '../assets/order-list.svg';
+import unorderListIcon from '../assets/unorder-list.svg';
+import checkListIcon from '../assets/check-list.svg';
+import imageIcon from '../assets/image.svg';
+import quoteIcon from '../assets/quote.svg';
+import codeIcon from '../assets/code.svg';
+import dividerIcon from '../assets/divider.svg';
+
 interface ComponentPickerOption {
   title: string;
   keywords: string[];
+  icon: string; // SVG 图标路径
   onSelect: (editor: LexicalEditor) => void;
 }
 
@@ -38,6 +55,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '文本',
     keywords: ['normal', 'paragraph', 'p', 'text'],
+    icon: textIcon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -50,6 +68,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '一级标题',
     keywords: ['heading', 'header', 'h1'],
+    icon: heading1Icon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -62,6 +81,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '二级标题',
     keywords: ['heading', 'header', 'h2'],
+    icon: heading2Icon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -74,6 +94,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '三级标题',
     keywords: ['heading', 'header', 'h3'],
+    icon: heading3Icon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -86,6 +107,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '有序列表',
     keywords: ['numbered list', 'ordered list', 'ol'],
+    icon: orderListIcon,
     onSelect: (editor: LexicalEditor) => {
       // 使用命令来切换或创建列表，命令会自动处理类型转换
       editor.dispatchCommand(INSERT_ORDERED_LIST_COMMAND, undefined);
@@ -94,6 +116,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '无序列表',
     keywords: ['bulleted list', 'unordered list', 'ul'],
+    icon: unorderListIcon,
     onSelect: (editor: LexicalEditor) => {
       // 使用命令来切换或创建列表，命令会自动处理类型转换
       editor.dispatchCommand(INSERT_UNORDERED_LIST_COMMAND, undefined);
@@ -102,6 +125,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '待办列表',
     keywords: ['checklist', 'todo', 'task', 'checkbox', '待办', '任务'],
+    icon: checkListIcon,
     onSelect: (editor: LexicalEditor) => {
       // 使用命令来切换或创建 checklist，命令会自动处理类型转换
       editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined);
@@ -110,6 +134,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '图片',
     keywords: ['image', 'photo', 'picture', 'file'],
+    icon: imageIcon,
     onSelect: (editor: LexicalEditor) => {
       const input = document.createElement('input');
       input.type = 'file';
@@ -144,6 +169,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
   {
     title: '引用',
     keywords: ['quote', 'blockquote', '引用'],
+    icon: quoteIcon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -154,8 +180,67 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
     },
   },
   {
+    title: '代码块',
+    keywords: ['code', 'codeblock', '代码', '代码块'],
+    icon: codeIcon,
+    onSelect: (editor: LexicalEditor) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          // 切换为代码块
+          $setBlocksType(selection, () => $createCodeNode());
+        }
+      });
+      
+      // 延迟执行格式清除，确保块转换已完成
+      setTimeout(() => {
+        editor.update(() => {
+          const selection = $getSelection();
+          if ($isRangeSelection(selection)) {
+            const anchor = selection.anchor.getNode();
+            let parent = anchor.getParent();
+            
+            // 向上查找代码块节点
+            while (parent && !$isCodeNode(parent)) {
+              parent = parent.getParent();
+            }
+            
+            if ($isCodeNode(parent)) {
+              // 获取代码块内的所有子节点
+              const children = parent.getChildren();
+              const replacements: Array<{ oldNode: TextNode; newNode: TextNode }> = [];
+              
+              // 收集需要替换的节点
+              children.forEach((child) => {
+                if ($isTextNode(child) && child.getFormat() !== 0) {
+                  // 创建没有格式的新文本节点
+                  const newTextNode = $createTextNode(child.getTextContent());
+                  replacements.push({ oldNode: child, newNode: newTextNode });
+                }
+                // 处理后代节点
+                const descendants = child.getDescendants();
+                descendants.forEach((descendant) => {
+                  if ($isTextNode(descendant) && descendant.getFormat() !== 0) {
+                    const newTextNode = $createTextNode(descendant.getTextContent());
+                    replacements.push({ oldNode: descendant, newNode: newTextNode });
+                  }
+                });
+              });
+              
+              // 执行替换
+              replacements.forEach(({ oldNode, newNode }) => {
+                oldNode.replace(newNode);
+              });
+            }
+          }
+        });
+      }, 0);
+    },
+  },
+  {
     title: '分割线',
     keywords: ['horizontal rule', 'divider', 'hr'],
+    icon: dividerIcon,
     onSelect: (editor: LexicalEditor) => {
       editor.update(() => {
         const selection = $getSelection();
@@ -219,7 +304,20 @@ export function useComponentPickerPlugin(
     options.forEach((option, index) => {
       const li = document.createElement('li');
       li.className = `component-picker-item ${index === selectedIndex ? 'selected' : ''}`;
-      li.textContent = option.title;
+      
+      // 添加图标
+      const iconImg = document.createElement('img');
+      iconImg.src = option.icon;
+      iconImg.className = 'picker-icon';
+      iconImg.alt = option.title;
+      li.appendChild(iconImg);
+      
+      // 添加文本
+      const textSpan = document.createElement('span');
+      textSpan.className = 'text';
+      textSpan.textContent = option.title;
+      li.appendChild(textSpan);
+      
       li.onclick = () => {
         option.onSelect(editor);
         hideMenu();
@@ -251,7 +349,16 @@ export function useComponentPickerPlugin(
     if (!menuElement) return;
     const items = menuElement.querySelectorAll('li');
     items.forEach((item, index) => {
-      item.className = `component-picker-item ${index === selectedIndex ? 'selected' : ''}`;
+      const isSelected = index === selectedIndex;
+      item.className = `component-picker-item ${isSelected ? 'selected' : ''}`;
+      
+      // 如果是选中的项，滚动到视野中
+      if (isSelected) {
+        item.scrollIntoView({
+          block: 'nearest', // 只在需要时滚动
+          behavior: 'smooth', // 平滑滚动
+        });
+      }
     });
   };
 

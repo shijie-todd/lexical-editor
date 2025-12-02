@@ -156,67 +156,73 @@
   list-style: none;
 }
 
-.editor-list-check .editor-list-item {
-  margin: 0;
-  padding: 4px 0;
-  padding-left: 24px;
+.editor-listitem-checked,
+.editor-listitem-unchecked {
   position: relative;
-  list-style: none;
-  display: flex;
-  align-items: center;
+  margin-left: 0.5em;
+  margin-right: 0.5em;
+  padding-left: 1.5em;
+  padding-right: 0.5em;
+  list-style-type: none;
   outline: none;
+  display: block;
+  min-height: 1.5em; /* 关键：确保有最小高度 */
 }
 
-.editor-list-check .editor-list-item:focus {
-  outline: none;
-  border: none;
+.editor-listitem-checked > *,
+.editor-listitem-unchecked > * {
+  margin-left: 0.01em;
 }
 
-.editor-list-check .editor-list-item:focus-visible {
-  outline: none;
-}
-
-.editor-list-check .editor-list-item::before {
-  content: '';
-  position: absolute;
+.editor-listitem-checked:before,
+.editor-listitem-unchecked:before {
+  content: '\200B'; /* 零宽度空格，确保复选框始终可见 */
+  width: 0.9em;
+  height: 0.9em;
+  top: 50%;
   left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
-  border: 2px solid #999;
-  border-radius: 3px;
-  background: #fff;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: all 0.2s ease;
-}
-
-.editor-list-check .editor-list-item:hover::before {
-  border-color: #4a90e2;
-}
-
-.editor-list-check .editor-list-item[aria-checked='true']::before {
-  background: #4a90e2;
-  border-color: #4a90e2;
-}
-
-.editor-list-check .editor-list-item[aria-checked='true']::after {
-  content: '✓';
+  display: block;
+  background-size: cover;
   position: absolute;
-  left: 3px;
-  top: 50%;
   transform: translateY(-50%);
-  color: #fff;
-  font-size: 14px;
-  font-weight: bold;
-  line-height: 1;
-  width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+}
+
+.editor-listitem-checked {
+  text-decoration: line-through;
+}
+
+.editor-listitem-unchecked:focus:before,
+.editor-listitem-checked:focus:before {
+  box-shadow: 0 0 0 2px #a6cdfe;
+  border-radius: 2px;
+}
+
+.editor-listitem-unchecked:before {
+  border: 1px solid #999;
+  border-radius: 2px;
+}
+
+.editor-listitem-checked:before {
+  border: 1px solid #4a90e2;
+  border-radius: 2px;
+  background-color: #4a90e2;
+  background-repeat: no-repeat;
+}
+
+.editor-listitem-checked:after {
+  content: '';
+  cursor: pointer;
+  border-color: #fff;
+  border-style: solid;
+  position: absolute;
+  display: block;
+  top: 45%;
+  width: 0.2em;
+  left: 0.35em;
+  height: 0.4em;
+  transform: translateY(-50%) rotate(45deg);
+  border-width: 0 0.1em 0.1em 0;
 }
 
 .editor-hr {
@@ -260,12 +266,108 @@
   text-decoration: line-through;
 }
 
+/* 行内代码样式 */
 .editor-text-code {
   background-color: #f4f4f4;
   padding: 2px 4px;
   border-radius: 3px;
-  font-family: monospace;
+  font-family: 'Fira Code', 'Courier New', Consolas, Monaco, monospace;
   font-size: 0.9em;
+  color: #e74c3c;
+  /* 行内代码不应该有其他文本装饰 */
+  text-decoration: none !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+}
+
+/* 代码块样式 */
+.editor-code {
+  background-color: #f5f5f5;
+  font-family: 'Fira Code', 'Courier New', Consolas, Monaco, monospace;
+  display: block;
+  padding: 16px;
+  margin: 12px 0;
+  line-height: 1.5;
+  font-size: 14px;
+  overflow-x: auto;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  color: #333;
+  tab-size: 2;
+  white-space: pre;
+  position: relative; /* 为 block menu 定位提供参考 */
+}
+
+/* 代码块内的所有内容都不应该有任何文本装饰 */
+.editor-code *,
+.editor-code span,
+.editor-code .editor-text-bold,
+.editor-code .editor-text-italic,
+.editor-code .editor-text-underline,
+.editor-code .editor-text-strikethrough,
+.editor-code .editor-text-code {
+  text-decoration: none !important;
+  font-weight: normal !important;
+  font-style: normal !important;
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  color: inherit !important;
+}
+
+/* Slash Command Menu 样式 */
+.typeahead-popover.component-picker-menu {
+  position: absolute;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 250px;
+  overflow-y: auto;
+  min-width: 200px;
+  color: #333;
+}
+
+.typeahead-popover.component-picker-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  color: #333;
+}
+
+.component-picker-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #333;
+  font-size: 14px;
+}
+
+.component-picker-item:hover,
+.component-picker-item.selected {
+  background-color: #f0f0f0;
+  color: #1a1a1a;
+}
+
+.component-picker-item .picker-icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.component-picker-item:hover .picker-icon,
+.component-picker-item.selected .picker-icon {
+  opacity: 1;
+}
+
+.component-picker-item .text {
+  flex: 1;
+  color: inherit;
 }
 
 /* Block Menu 样式 */
@@ -302,5 +404,174 @@
 
 .block-menu-plus:hover {
   background: #e0e0e0;
+}
+
+/* 链接样式 */
+.editor a {
+  color: #4a90e2;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editor a:hover {
+  color: #357abd;
+}
+
+/* 浮动文本格式工具栏 */
+.floating-text-format-toolbar {
+  display: flex;
+  background: #fff;
+  padding: 4px;
+  border-radius: 8px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.5s;
+  gap: 2px;
+}
+
+.floating-text-format-toolbar .toolbar-item {
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+  min-width: 32px;
+  height: 32px;
+}
+
+.floating-text-format-toolbar .toolbar-item:hover {
+  background: #eee;
+}
+
+.floating-text-format-toolbar .toolbar-item.active {
+  background: rgba(74, 144, 226, 0.2);
+}
+
+.floating-text-format-toolbar .toolbar-item .icon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.floating-text-format-toolbar .toolbar-item.active .icon {
+  opacity: 1;
+}
+
+.floating-text-format-toolbar .toolbar-item:hover .icon {
+  opacity: 1;
+}
+
+/* 浮动链接编辑器 */
+.floating-link-editor {
+  display: flex;
+  background: #fff;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+  transition: opacity 0.5s;
+  max-width: 400px;
+  width: 100%;
+  overflow: hidden;
+}
+
+.floating-link-editor .link-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: transparent;
+  color: #333;
+}
+
+.floating-link-editor .link-input::placeholder {
+  color: #999;
+}
+
+.floating-link-editor .link-buttons {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-left: 1px solid #eee;
+}
+
+.floating-link-editor .link-button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 16px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+
+.floating-link-editor .link-button:hover {
+  background: #f0f0f0;
+}
+
+.floating-link-editor .link-cancel {
+  color: #e74c3c;
+}
+
+.floating-link-editor .link-confirm {
+  color: #27ae60;
+}
+
+.floating-link-editor .link-view {
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+  gap: 8px;
+  width: 100%;
+}
+
+.floating-link-editor .link-text {
+  flex: 1;
+  color: #4a90e2;
+  text-decoration: none;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.floating-link-editor .link-text:hover {
+  text-decoration: underline;
+}
+
+.floating-link-editor .link-edit,
+.floating-link-editor .link-trash {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+}
+
+.floating-link-editor .link-edit:hover,
+.floating-link-editor .link-trash:hover {
+  background: #f0f0f0;
+}
+
+.floating-link-editor .link-trash {
+  color: #e74c3c;
 }
 
