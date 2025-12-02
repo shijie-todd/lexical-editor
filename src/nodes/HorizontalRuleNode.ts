@@ -1,0 +1,107 @@
+/**
+ * HorizontalRuleNode - 分割线节点
+ * 这是一个简单的 ElementNode，渲染为 <hr> 标签
+ */
+
+import type {
+  DOMConversionMap,
+  DOMConversionOutput,
+  DOMExportOutput,
+  EditorConfig,
+  LexicalNode,
+  NodeKey,
+  SerializedLexicalNode,
+  Spread,
+} from 'lexical';
+
+import {
+  $applyNodeReplacement,
+  ElementNode,
+} from 'lexical';
+
+export type SerializedHorizontalRuleNode = Spread<
+  {
+    type: 'horizontalrule';
+  },
+  SerializedLexicalNode
+>;
+
+export class HorizontalRuleNode extends ElementNode {
+  static getType(): string {
+    return 'horizontalrule';
+  }
+
+  static clone(node: HorizontalRuleNode): HorizontalRuleNode {
+    return new HorizontalRuleNode(node.__key);
+  }
+
+  constructor(key?: NodeKey) {
+    super(key);
+  }
+
+  // View
+
+  createDOM(config: EditorConfig): HTMLElement {
+    const hr = document.createElement('hr');
+    const className = config.theme.hr;
+    if (className !== undefined) {
+      hr.className = className;
+    }
+    return hr;
+  }
+
+  updateDOM(): false {
+    return false;
+  }
+
+  static importDOM(): DOMConversionMap | null {
+    return {
+      hr: (node: Node) => ({
+        conversion: $convertHorizontalRuleElement,
+        priority: 0,
+      }),
+    };
+  }
+
+  exportDOM(): DOMExportOutput {
+    const element = document.createElement('hr');
+    return {element};
+  }
+
+  static importJSON(
+    serializedNode: SerializedHorizontalRuleNode,
+  ): HorizontalRuleNode {
+    return $createHorizontalRuleNode();
+  }
+
+  exportJSON(): SerializedHorizontalRuleNode {
+    return {
+      ...super.exportJSON(),
+      type: 'horizontalrule',
+      version: 1,
+    };
+  }
+
+  getTextContent(): string {
+    return '\n';
+  }
+
+  isInline(): false {
+    return false;
+  }
+}
+
+function $convertHorizontalRuleElement(): DOMConversionOutput {
+  return {node: $createHorizontalRuleNode()};
+}
+
+export function $createHorizontalRuleNode(): HorizontalRuleNode {
+  return $applyNodeReplacement(new HorizontalRuleNode());
+}
+
+export function $isHorizontalRuleNode(
+  node: LexicalNode | null | undefined,
+): node is HorizontalRuleNode {
+  return node instanceof HorizontalRuleNode;
+}
+

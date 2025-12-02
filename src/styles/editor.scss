@@ -1,0 +1,233 @@
+/* Editor 主题样式 - 非 scoped，确保 Lexical 生成的类名能正确应用 */
+
+/* 基础文本样式 */
+.editor * {
+  color: inherit;
+}
+
+.editor-paragraph {
+  margin: 0;
+  margin-bottom: 8px;
+  position: relative;
+  color: #333;
+}
+
+.editor-heading-h1 {
+  font-size: 28px;
+  font-weight: 600;
+  margin: 0;
+  margin-bottom: 16px;
+  color: #1a1a1a;
+  line-height: 1.3;
+}
+
+.editor-heading-h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin: 0;
+  margin-bottom: 12px;
+  color: #1a1a1a;
+  line-height: 1.3;
+}
+
+.editor-heading-h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+  line-height: 1.4;
+}
+
+.editor-list-ul {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+}
+
+.editor-list-ol {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+  /* 第一层不设置 list-style-type，使用默认的 decimal (1, 2, 3) */
+}
+
+.editor-list-ol2 {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+  list-style-type: upper-alpha;
+}
+
+.editor-list-ol3 {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+  list-style-type: lower-alpha;
+}
+
+.editor-list-ol4 {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+  list-style-type: upper-roman;
+}
+
+.editor-list-ol5 {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style-position: outside;
+  list-style-type: lower-roman;
+}
+
+.editor-list-item {
+  margin: 0 32px;
+  padding: 4px 0;
+  padding-left: 0;
+  color: #333;
+  display: list-item;
+  position: relative;
+}
+
+/* 列表项的 marker 样式 */
+.editor-list-item::marker {
+  color: #333;
+}
+
+/* 嵌套列表项样式 - 当列表项被标记为嵌套时（Lexical 会自动应用这个类） */
+.editor-nested-list-item {
+  list-style-type: none;
+}
+
+.editor-nested-list-item::marker {
+  display: none;
+}
+
+/* 当列表项包含子列表时，隐藏 marker（使用 :has() 选择器，如果不支持则 Lexical 会应用 nested-list-item 类） */
+.editor-list-item:has(> .editor-list-ul),
+.editor-list-item:has(> .editor-list-ol) {
+  list-style-type: none;
+}
+
+.editor-list-item:has(> .editor-list-ul)::marker,
+.editor-list-item:has(> .editor-list-ol)::marker {
+  display: none;
+}
+
+/* 缩进样式 - Lexical 会自动应用这个类来创建缩进效果 */
+.editor-indent {
+  --lexical-indent-base-value: 40px;
+}
+
+/* 确保嵌套列表有正确的缩进 */
+.editor-list-item .editor-list-ul,
+.editor-list-item .editor-list-ol {
+  margin-top: 4px;
+  margin-bottom: 4px;
+  margin-left: 0;
+  padding-left: 0;
+}
+
+.editor-hr {
+  margin: 16px 0;
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  background: none;
+}
+
+.editor-image {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 16px 0;
+}
+
+/* Quote 样式 */
+.editor-quote {
+  margin: 0;
+  margin-left: 20px;
+  margin-bottom: 10px;
+  padding-left: 16px;
+  border-left: 4px solid #ccc;
+  color: #666;
+}
+
+/* 文本格式样式 */
+.editor-text-bold {
+  font-weight: bold;
+}
+
+.editor-text-italic {
+  font-style: italic;
+}
+
+.editor-text-underline {
+  text-decoration: underline;
+}
+
+.editor-text-strikethrough {
+  text-decoration: line-through;
+}
+
+.editor-text-code {
+  background-color: #f4f4f4;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+/* Block Menu 样式 */
+.block-menu {
+  position: absolute;
+  left: 8px; /* 稍微往右挪一点，放在 padding 区域内 */
+  top: 0;
+  display: flex;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 10;
+}
+
+.block-menu:hover,
+.block-menu.block-menu-visible {
+  opacity: 1 !important;
+}
+
+.block-menu-plus {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: #f0f0f0;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #666;
+  padding: 0;
+  transition: background 0.2s;
+}
+
+.block-menu-plus:hover {
+  background: #e0e0e0;
+}
+
