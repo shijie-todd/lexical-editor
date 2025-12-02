@@ -16,7 +16,7 @@ import './styles/editor.scss';
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
 import { createEditor, $getRoot, $createParagraphNode } from 'lexical';
 import { HeadingNode, QuoteNode, registerRichText } from '@lexical/rich-text';
-import { ListNode, ListItemNode } from '@lexical/list';
+import { ListNode, ListItemNode, registerCheckList } from '@lexical/list';
 import { ParagraphNode, TextNode } from 'lexical';
 import { HorizontalRuleNode } from './nodes/HorizontalRuleNode';
 import { ImageNode } from './nodes/ImageNode';
@@ -76,6 +76,7 @@ const theme = {
     nested: {
       listitem: 'editor-nested-list-item',
     },
+    checklist: 'editor-list-check',
   },
   indent: 'editor-indent',
   quote: 'editor-quote',
@@ -169,6 +170,9 @@ const initEditor = () => {
     hasStrictIndent: false,
     maxIndent: 7, // 与 playground 保持一致
   });
+
+  // 注册 Checklist 功能
+  registerCheckList(editor.value);
 
   // 设置只读模式
   if (props.readonly) {
@@ -305,7 +309,7 @@ onMounted(() => {
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  max-height: 310px;
+  max-height: 250px;
   overflow-y: auto;
   min-width: 200px;
   color: #333;

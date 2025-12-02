@@ -2,10 +2,14 @@
 import { ref } from 'vue'
 import Editor from './Editor.vue'
 
-const content = ref('# 一级 ## 二级')
+const content = ref(`
+# 一级
+
+## 二级 `)
 </script>
 
 <template>
+  {{ content }}
   <Editor v-model="content" />
 </template>
 

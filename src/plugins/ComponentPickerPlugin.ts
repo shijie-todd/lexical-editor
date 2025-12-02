@@ -5,9 +5,10 @@
 import {
   INSERT_ORDERED_LIST_COMMAND,
   INSERT_UNORDERED_LIST_COMMAND,
+  INSERT_CHECK_LIST_COMMAND,
 } from '@lexical/list';
-import {$createHeadingNode} from '@lexical/rich-text';
-import {$setBlocksType} from '@lexical/selection';
+import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
+import { $setBlocksType } from '@lexical/selection';
 import {
   $createParagraphNode,
   $getSelection,
@@ -21,11 +22,11 @@ import {
   type LexicalEditor,
   TextNode,
 } from 'lexical';
-import {mergeRegister} from '@lexical/utils';
+import { mergeRegister } from '@lexical/utils';
 
-import {$createHorizontalRuleNode} from '../nodes/HorizontalRuleNode';
-import {INSERT_IMAGE_COMMAND, type ImageUploadHandler} from './ImagesPlugin';
-import {fileToBase64} from '../utils/imageUpload';
+import { $createHorizontalRuleNode } from '../nodes/HorizontalRuleNode';
+import { INSERT_IMAGE_COMMAND, type ImageUploadHandler } from './ImagesPlugin';
+import { fileToBase64 } from '../utils/imageUpload';
 
 interface ComponentPickerOption {
   title: string;
@@ -99,17 +100,11 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
     },
   },
   {
-    title: '分割线',
-    keywords: ['horizontal rule', 'divider', 'hr'],
+    title: '待办列表',
+    keywords: ['checklist', 'todo', 'task', 'checkbox', '待办', '任务'],
     onSelect: (editor: LexicalEditor) => {
-      editor.update(() => {
-        const selection = $getSelection();
-        if ($isRangeSelection(selection)) {
-          const hr = $createHorizontalRuleNode();
-          selection.insertNodes([hr]);
-          hr.selectNext();
-        }
-      });
+      // 使用命令来切换或创建 checklist，命令会自动处理类型转换
+      editor.dispatchCommand(INSERT_CHECK_LIST_COMMAND, undefined);
     },
   },
   {
@@ -124,7 +119,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
         if (file) {
           try {
             let src: string;
-            
+
             if (uploadImage) {
               // 使用自定义上传方法
               src = await uploadImage(file);
@@ -132,7 +127,7 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
               // 默认使用 base64
               src = await fileToBase64(file);
             }
-            
+
             editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
               altText: file.name,
               src,
@@ -144,6 +139,32 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
         }
       };
       input.click();
+    },
+  },
+  {
+    title: '引用',
+    keywords: ['quote', 'blockquote', '引用'],
+    onSelect: (editor: LexicalEditor) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          $setBlocksType(selection, () => $createQuoteNode());
+        }
+      });
+    },
+  },
+  {
+    title: '分割线',
+    keywords: ['horizontal rule', 'divider', 'hr'],
+    onSelect: (editor: LexicalEditor) => {
+      editor.update(() => {
+        const selection = $getSelection();
+        if ($isRangeSelection(selection)) {
+          const hr = $createHorizontalRuleNode();
+          selection.insertNodes([hr]);
+          hr.selectNext();
+        }
+      });
     },
   },
 ];
@@ -160,13 +181,13 @@ export function useComponentPickerPlugin(
   editor: LexicalEditor,
   options: ComponentPickerPluginOptions = {},
 ) {
-  const {uploadImage} = options;
+  const { uploadImage } = options;
   let menuElement: HTMLDivElement | null = null;
   let selectedIndex = 0;
   let queryString = '';
 
   const baseOptions = createBaseOptions(uploadImage);
-  
+
   const filterOptions = (query: string): ComponentPickerOption[] => {
     if (!query) {
       return baseOptions;
@@ -292,7 +313,7 @@ export function useComponentPickerPlugin(
   };
 
   return mergeRegister(
-    editor.registerUpdateListener(({editorState}) => {
+    editor.registerUpdateListener(({ editorState }) => {
       editorState.read(() => {
         const selection = $getSelection();
         if (!$isRangeSelection(selection)) {
@@ -323,13 +344,13 @@ export function useComponentPickerPlugin(
         // 检查光标位置和 / 的位置
         const text = anchorNode.getTextContent();
         const anchorOffset = selection.anchor.offset;
-        
+
         // 只检查光标位置之前的文本
         const textBeforeCursor = text.substring(0, anchorOffset);
-        
+
         // 查找最后一个 / 的位置
         const slashIndex = textBeforeCursor.lastIndexOf('/');
-        
+
         if (slashIndex === -1) {
           hideMenu();
           return;
@@ -344,7 +365,7 @@ export function useComponentPickerPlugin(
 
         queryString = textBeforeCursor.substring(slashIndex + 1);
         const options = filterOptions(queryString);
-        
+
         if (options.length > 0) {
           const domSelection = window.getSelection();
           if (domSelection && domSelection.rangeCount > 0) {

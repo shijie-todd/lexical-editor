@@ -146,6 +146,79 @@
   padding-left: 0;
 }
 
+/* Checklist 样式 */
+.editor-list-check {
+  margin: 0;
+  margin-left: 0;
+  padding: 0;
+  padding-left: 0;
+  color: #333;
+  list-style: none;
+}
+
+.editor-list-check .editor-list-item {
+  margin: 0;
+  padding: 4px 0;
+  padding-left: 24px;
+  position: relative;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  outline: none;
+}
+
+.editor-list-check .editor-list-item:focus {
+  outline: none;
+  border: none;
+}
+
+.editor-list-check .editor-list-item:focus-visible {
+  outline: none;
+}
+
+.editor-list-check .editor-list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: 2px solid #999;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.editor-list-check .editor-list-item:hover::before {
+  border-color: #4a90e2;
+}
+
+.editor-list-check .editor-list-item[aria-checked='true']::before {
+  background: #4a90e2;
+  border-color: #4a90e2;
+}
+
+.editor-list-check .editor-list-item[aria-checked='true']::after {
+  content: '✓';
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
 .editor-hr {
   margin: 16px 0;
   border: none;
