@@ -575,3 +575,55 @@
   color: #e74c3c;
 }
 
+/* 表格样式 */
+.editor-table {
+  border-collapse: collapse;
+  border: 1px solid #ddd;
+  margin: 16px 0;
+  width: 100%;
+  overflow-x: auto;
+  table-layout: fixed;
+}
+
+.editor-table-cell {
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  position: relative;
+  outline: none;
+  min-width: 75px;
+  vertical-align: top;
+  text-align: start;
+  background-color: #fff;
+}
+
+.editor-table-cell-header {
+  /* 表头样式与普通单元格相同，不再特殊显示 */
+  background-color: #fff; /* 改为白色，与普通单元格一致 */
+  font-weight: normal; /* 改为正常字重，不再加粗 */
+  text-align: start;
+  border: 1px solid #ddd;
+  padding: 8px 12px;
+  position: relative;
+  outline: none;
+  min-width: 75px;
+  vertical-align: top;
+}
+
+/* 表格单元格聚焦状态 */
+.editor-table-cell:focus,
+.editor-table-cell-header:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: -2px;
+}
+
+/* 表格单元格内的段落 */
+.editor-table-cell p,
+.editor-table-cell-header p {
+  margin: 0;
+}
+
+/* 表格选中状态 */
+.editor-table-cell-selected {
+  background-color: #e8f4fd;
+}
+

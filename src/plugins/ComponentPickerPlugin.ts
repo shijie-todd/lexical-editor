@@ -10,6 +10,7 @@ import {
 import { $createHeadingNode, $createQuoteNode } from '@lexical/rich-text';
 import { $setBlocksType } from '@lexical/selection';
 import { $createCodeNode, $isCodeNode } from '@lexical/code';
+import { $getTableCellNodeFromLexicalNode, $isTableCellNode } from '@lexical/table';
 import {
   $createParagraphNode,
   $createTextNode,
@@ -29,6 +30,7 @@ import { mergeRegister } from '@lexical/utils';
 
 import { $createHorizontalRuleNode } from '../nodes/HorizontalRuleNode';
 import { INSERT_IMAGE_COMMAND, type ImageUploadHandler } from './ImagesPlugin';
+import { INSERT_TABLE_COMMAND } from './TablePlugin';
 import { fileToBase64 } from '../utils/imageUpload';
 
 // 导入 SVG 图标
@@ -43,6 +45,7 @@ import imageIcon from '../assets/image.svg';
 import quoteIcon from '../assets/quote.svg';
 import codeIcon from '../assets/code.svg';
 import dividerIcon from '../assets/divider.svg';
+import tableIcon from '../assets/table.svg';
 
 interface ComponentPickerOption {
   title: string;
@@ -252,6 +255,18 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
       });
     },
   },
+  {
+    title: '表格',
+    keywords: ['table', 'grid', '表格'],
+    icon: tableIcon,
+    onSelect: (editor: LexicalEditor) => {
+      // 默认创建 3x3 的表格
+      editor.dispatchCommand(INSERT_TABLE_COMMAND, {
+        rows: '3',
+        columns: '3',
+      });
+    },
+  },
 ];
 
 export interface ComponentPickerPluginOptions {
@@ -343,6 +358,7 @@ export function useComponentPickerPlugin(
     const rect = anchorElement.getBoundingClientRect();
     menuElement.style.top = `${rect.bottom + window.scrollY}px`;
     menuElement.style.left = `${rect.left + window.scrollX}px`;
+    // todo: 当菜单超出屏幕时，需要调整位置，具体策略是，当菜单的底部超出屏幕时，需要将菜单向上移动，当菜单的顶部超出屏幕时，需要将菜单向下移动
   };
 
   const updateMenu = () => {
@@ -430,6 +446,14 @@ export function useComponentPickerPlugin(
 
         const anchorNode = selection.anchor.getNode();
         if (!(anchorNode instanceof TextNode)) {
+          hideMenu();
+          return;
+        }
+
+        // 检查是否在表格单元格内
+        const tableCellNode = $getTableCellNodeFromLexicalNode(anchorNode);
+        if (tableCellNode && $isTableCellNode(tableCellNode)) {
+          // 在表格单元格内，不显示 slash command 菜单
           hideMenu();
           return;
         }

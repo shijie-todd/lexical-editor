@@ -7,6 +7,15 @@
         :contenteditable="!readonly" 
         @click="handleEditorClick"
       ></div>
+      <!-- 表格操作菜单 -->
+      <TableActionMenu
+        v-if="!readonly"
+        :show="tableActionMenuState.show"
+        :x="tableActionMenuState.x"
+        :y="tableActionMenuState.y"
+        :tableCellNode="tableActionMenuState.tableCellNode"
+        :editor="editor"
+      />
     </div>
   </div>
 </template>
@@ -22,6 +31,7 @@ import { CodeNode, CodeHighlightNode } from '@lexical/code';
 import { ParagraphNode, TextNode } from 'lexical';
 import { HorizontalRuleNode } from './nodes/HorizontalRuleNode';
 import { ImageNode } from './nodes/ImageNode';
+import { TableNode, TableCellNode, TableRowNode } from '@lexical/table';
 import { useImagesPlugin } from './plugins/ImagesPlugin';
 import { useComponentPickerPlugin } from './plugins/ComponentPickerPlugin';
 import { useBlockMenuPlugin } from './plugins/BlockMenuPlugin';
@@ -31,6 +41,9 @@ import { useFloatingTextFormatToolbarPlugin } from './plugins/FloatingTextFormat
 import { useFloatingLinkEditorPlugin } from './plugins/FloatingLinkEditorPlugin';
 import { useClearFormatOnEnterPlugin } from './plugins/ClearFormatOnEnterPlugin';
 import { useCodeBlockExitPlugin } from './plugins/CodeBlockExitPlugin';
+import { useTablePlugin } from './plugins/TablePlugin';
+import { useTableActionMenuPlugin, type TableActionMenuState } from './plugins/TableActionMenuPlugin';
+import TableActionMenu from './components/TableActionMenu.vue';
 import { fileToBase64 } from './utils/imageUpload';
 import {
   $convertFromMarkdownString,
@@ -62,12 +75,22 @@ let cleanupFloatingToolbar: (() => void) | undefined;
 let cleanupLinkEditor: (() => void) | undefined;
 let cleanupClearFormatOnEnter: (() => void) | undefined;
 let cleanupCodeBlockExit: (() => void) | undefined;
+let cleanupTable: (() => void) | undefined;
+let cleanupTableActionMenu: (() => void) | undefined;
 
 // 用于防止循环更新的标志
 let isUpdatingFromProps = false;
 
 // 链接编辑模式状态
 const isLinkEditMode = ref(false);
+
+// 表格操作菜单状态
+const tableActionMenuState = ref<TableActionMenuState>({
+  show: false,
+  x: 0,
+  y: 0,
+  tableCellNode: null,
+});
 
 const theme = {
   paragraph: 'editor-paragraph',
@@ -98,6 +121,9 @@ const theme = {
   hr: 'editor-hr',
   image: 'editor-image',
   code: 'editor-code',
+  table: 'editor-table',
+  tableCell: 'editor-table-cell',
+  tableCellHeader: 'editor-table-cell-header',
   text: {
     bold: 'editor-text-bold',
     italic: 'editor-text-italic',
@@ -124,6 +150,9 @@ const getEditorConfig = () => {
       QuoteNode,
       HorizontalRuleNode,
       ImageNode,
+      TableNode,
+      TableCellNode,
+      TableRowNode,
     ],
     onError: (error: Error) => {
       console.error('Lexical error:', error);
@@ -193,16 +222,18 @@ const initEditor = () => {
     uploadImage, // 传入自定义上传方法
   });
 
-  // Slash command 插件
-  cleanupPicker = useComponentPickerPlugin(editor.value, {
-    uploadImage, // 传入自定义上传方法（与 DragDropPastePlugin 使用同一个）
-  });
+  // Slash command 插件（仅在非只读模式下启用）
+  if (!props.readonly) {
+    cleanupPicker = useComponentPickerPlugin(editor.value, {
+      uploadImage, // 传入自定义上传方法（与 DragDropPastePlugin 使用同一个）
+    });
 
-  // 块菜单插件（加号按钮）
-  cleanupBlockMenu = useBlockMenuPlugin(
-    editor.value,
-    editorRef.value,
-  );
+    // 块菜单插件（加号按钮，仅在非只读模式下启用）
+    cleanupBlockMenu = useBlockMenuPlugin(
+      editor.value,
+      editorRef.value,
+    );
+  }
 
   // 列表插件（处理列表结构、Tab 键缩进等）
   // 使用官方实现：registerList + registerTabIndentation
@@ -219,6 +250,18 @@ const initEditor = () => {
 
   // 代码块退出插件（在代码块空行按回车时退出）
   cleanupCodeBlockExit = useCodeBlockExitPlugin(editor.value);
+
+  // 表格插件
+  cleanupTable = useTablePlugin(editor.value);
+
+  // 表格操作菜单插件
+  if (!props.readonly) {
+    cleanupTableActionMenu = useTableActionMenuPlugin(editor.value, {
+      onStateChange: (state) => {
+        tableActionMenuState.value = state;
+      },
+    });
+  }
 
   // 浮动文本格式工具栏（包含链接按钮）
   if (!props.readonly) {
@@ -240,6 +283,9 @@ const initEditor = () => {
   // 设置只读模式
   if (props.readonly) {
     editor.value.setEditable(false);
+    
+    // 在只读模式下，让所有链接在新窗口打开
+    setupReadonlyLinkBehavior();
   }
 
   // 监听编辑器更新，同步到 modelValue
@@ -261,10 +307,57 @@ const initEditor = () => {
 };
 
 const handleEditorClick = (event: MouseEvent) => {
+  // 在只读模式下，处理链接点击
+  if (props.readonly) {
+    const target = event.target as HTMLElement;
+    const link = target.closest('a');
+    if (link && link.href) {
+      event.preventDefault();
+      window.open(link.href, '_blank', 'noopener,noreferrer');
+      return;
+    }
+  }
+  
   // 确保点击时编辑器获得焦点
   if (contentEditableRef.value && event.target === contentEditableRef.value) {
     contentEditableRef.value.focus();
   }
+};
+
+// 设置只读模式下的链接行为
+const setupReadonlyLinkBehavior = () => {
+  if (!contentEditableRef.value) return;
+  
+  // 使用 MutationObserver 监听 DOM 变化，为所有链接添加 target="_blank"
+  const observer = new MutationObserver(() => {
+    if (!contentEditableRef.value) return;
+    
+    const links = contentEditableRef.value.querySelectorAll('a');
+    links.forEach((link) => {
+      if (!link.hasAttribute('data-readonly-processed')) {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+        link.setAttribute('data-readonly-processed', 'true');
+      }
+    });
+  });
+  
+  // 初始设置所有现有链接
+  const links = contentEditableRef.value.querySelectorAll('a');
+  links.forEach((link) => {
+    link.setAttribute('target', '_blank');
+    link.setAttribute('rel', 'noopener noreferrer');
+    link.setAttribute('data-readonly-processed', 'true');
+  });
+  
+  // 监听 DOM 变化
+  observer.observe(contentEditableRef.value, {
+    childList: true,
+    subtree: true,
+  });
+  
+  // 保存 observer 以便清理
+  (contentEditableRef.value as any).__linkObserver = observer;
 };
 
 // 清理函数
@@ -278,6 +371,14 @@ onUnmounted(() => {
   cleanupLinkEditor?.();
   cleanupClearFormatOnEnter?.();
   cleanupCodeBlockExit?.();
+  cleanupTable?.();
+  cleanupTableActionMenu?.();
+  
+  // 清理链接观察器
+  if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
+    (contentEditableRef.value as any).__linkObserver.disconnect();
+  }
+  
   editor.value?.setRootElement(null);
 });
 
@@ -318,6 +419,28 @@ watch(
   (newValue) => {
     if (editor.value) {
       editor.value.setEditable(!newValue);
+      
+      // 如果切换到只读模式，设置链接行为
+      if (newValue) {
+        nextTick(() => {
+          setupReadonlyLinkBehavior();
+        });
+      } else {
+        // 如果切换到编辑模式，移除链接的 target 属性
+        if (contentEditableRef.value) {
+          const links = contentEditableRef.value.querySelectorAll('a');
+          links.forEach((link) => {
+            link.removeAttribute('data-readonly-processed');
+            // 保留 target 和 rel，因为用户可能需要它们
+          });
+          
+          // 断开观察器
+          if ((contentEditableRef.value as any).__linkObserver) {
+            (contentEditableRef.value as any).__linkObserver.disconnect();
+            delete (contentEditableRef.value as any).__linkObserver;
+          }
+        }
+      }
     }
   },
 );
