@@ -14,8 +14,6 @@ import {
   $getSelection,
   $insertNodes,
   $isNodeSelection,
-  $isParagraphNode,
-  $isRangeSelection,
   $isRootOrShadowRoot,
   $setSelection,
   COMMAND_PRIORITY_EDITOR,
@@ -216,59 +214,12 @@ export function useImagesPlugin(editor: LexicalEditor, readonly: boolean = false
     editor.registerCommand<InsertImagePayload>(
       INSERT_IMAGE_COMMAND,
       (payload) => {
-        const selection = $getSelection();
-        
-        if ($isNodeSelection(selection)) {
-          // 如果是节点选择，直接替换
-          const imageNode = $createImageNode(payload);
-          const nodes = selection.getNodes();
-          if (nodes[0]) {
-            nodes[0].replace(imageNode);
-          }
-          return true;
-        }
-        
-        if ($isRangeSelection(selection)) {
-          // 如果是范围选择，在当前位置插入图片
-          const anchorNode = selection.anchor.getNode();
-          
-          // 获取当前所在的段落
-          let targetNode = anchorNode;
-          while (targetNode && !$isParagraphNode(targetNode) && !$isRootOrShadowRoot(targetNode)) {
-            const parent = targetNode.getParent();
-            if (!parent) break;
-            targetNode = parent;
-          }
-          
-          if ($isParagraphNode(targetNode)) {
-            const textContent = targetNode.getTextContent();
-            
-            // 如果段落为空或只有空白，直接在该段落插入图片
-            if (!textContent || textContent.trim() === '') {
-              targetNode.clear();
-              const imageNode = $createImageNode(payload);
-              targetNode.append(imageNode);
-              targetNode.selectEnd();
-            } else {
-              // 如果段落有内容，在后面插入新段落
-              const imageParagraph = $createParagraphNode();
-              const imageNode = $createImageNode(payload);
-              imageParagraph.append(imageNode);
-              targetNode.insertAfter(imageParagraph);
-              imageParagraph.selectEnd();
-            }
-            
-            return true;
-          }
-        }
-        
-        // 默认行为
         const imageNode = $createImageNode(payload);
         $insertNodes([imageNode]);
         if ($isRootOrShadowRoot(imageNode.getParentOrThrow())) {
           $wrapNodeInElement(imageNode, $createParagraphNode).selectEnd();
         }
-        
+
         return true;
       },
       COMMAND_PRIORITY_EDITOR,

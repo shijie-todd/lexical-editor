@@ -3,7 +3,7 @@
  * 用于支持 ImageNode、HorizontalRuleNode、Table 和下划线格式
  */
 
-import type {ElementTransformer, TextFormatTransformer} from '@lexical/markdown';
+import type {ElementTransformer, TextFormatTransformer, TextMatchTransformer} from '@lexical/markdown';
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
@@ -77,157 +77,56 @@ export const UNDERLINE: TextFormatTransformer = {
 
 /**
  * Image Transformer
- * 支持 `![alt text](url)` 格式
+ * 支持 `![alt text](url)` 格式（行内图片）
  * 扩展格式支持宽度、高度：
  * `![alt](url =widthxheight)`
  * 例如：`![示例图片](https://example.com/image.jpg =500x300)`
  */
-export const IMAGE: ElementTransformer = {
+export const IMAGE: TextMatchTransformer = {
   dependencies: [ImageNode],
-  export: (node: LexicalNode, exportChildren) => {
-    // 如果是图片节点，直接导出
-    if ($isImageNode(node)) {
-      const altText = node.getAltText() || '';
-      const src = node.getSrc();
-      const width = node.__width;
-      const height = node.__height;
-      
-      // 构建 markdown 字符串
-      let markdown = `![${altText}](${src}`;
-      
-      // 如果有尺寸，添加额外信息
-      const hasDimensions = width !== 'inherit' && height !== 'inherit';
-      
-      if (hasDimensions) {
-        markdown += ` =${width}x${height}`;
-      }
-      
-      markdown += ')';
-      return markdown;
+  export: (node: LexicalNode) => {
+    if (!$isImageNode(node)) {
+      return null;
     }
     
-    // 如果是段落节点，检查它的子节点
-    if ($isParagraphNode(node)) {
-      const children = node.getChildren();
-      const childTypes = children.map(c => c.getType());
-      
-      // 如果段落只包含一个图片节点，导出图片
-      if (children.length === 1 && $isImageNode(children[0])) {
-        const imageNode = children[0];
-        const altText = imageNode.getAltText() || '';
-        const src = imageNode.getSrc();
-        const width = imageNode.__width;
-        const height = imageNode.__height;
-        
-        let markdown = `![${altText}](${src}`;
-        
-        const hasDimensions = width !== 'inherit' && height !== 'inherit';
-        
-        if (hasDimensions) {
-          markdown += ` =${width}x${height}`;
-        }
-        
-        markdown += ')';
-        return markdown;
-      }
-      
-      // 如果段落包含图片和其他内容，将图片和文本分开导出
-      if (childTypes.includes('image')) {
-        const parts: string[] = [];
-        let currentText = '';
-        
-        for (const child of children) {
-          if ($isImageNode(child)) {
-            // 如果之前有文本，先保存
-            if (currentText) {
-              parts.push(currentText);
-              currentText = '';
-            }
-            
-            // 导出图片
-            const altText = child.getAltText() || '';
-            const src = child.getSrc();
-            const width = child.__width;
-            const height = child.__height;
-            
-            let markdown = `![${altText}](${src}`;
-            const hasDimensions = width !== 'inherit' && height !== 'inherit';
-            
-            if (hasDimensions) {
-              markdown += ` =${width}x${height}`;
-            }
-            markdown += ')';
-            parts.push(markdown);
-          } else if ($isTextNode(child)) {
-            // 累积文本（带格式）
-            const text = child.getTextContent();
-            let formattedText = text;
-            
-            if (child.hasFormat('bold')) {
-              formattedText = `**${formattedText}**`;
-            }
-            if (child.hasFormat('italic')) {
-              formattedText = `*${formattedText}*`;
-            }
-            if (child.hasFormat('code')) {
-              formattedText = `\`${formattedText}\``;
-            }
-            if (child.hasFormat('strikethrough')) {
-              formattedText = `~~${formattedText}~~`;
-            }
-            if (child.hasFormat('underline')) {
-              formattedText = `++${formattedText}++`;
-            }
-            
-            currentText += formattedText;
-          } else {
-            // 其他类型节点
-            currentText += child.getTextContent();
-          }
-        }
-        
-        // 保存最后的文本
-        if (currentText) {
-          parts.push(currentText);
-        }
-        
-        // 用换行连接所有部分
-        return parts.join('\n\n');
-      }
+    const altText = node.getAltText() || '';
+    const src = node.getSrc();
+    const width = node.__width;
+    const height = node.__height;
+    
+    // 构建 markdown 字符串
+    let markdown = `![${altText}](${src}`;
+    
+    // 如果有尺寸，添加额外信息
+    const hasDimensions = width !== 'inherit' && height !== 'inherit';
+    
+    if (hasDimensions) {
+      markdown += ` =${width}x${height}`;
     }
     
-    return null;
+    markdown += ')';
+    return markdown;
   },
-  regExp: /^!\[([^\]]*)\]\(([^\s)]+)(?:\s*=(\d+)x(\d+))?\)$/,
-  replace: (
-    parentNode: ElementNode,
-    _children: Array<LexicalNode>,
-    match: Array<string>,
-    isImport: boolean,
-  ) => {
+  importRegExp: /!\[([^\]]*)\]\(([^\s)]+)(?:\s*=(\d+)x(\d+))?\)/,
+  regExp: /!\[([^\]]*)\]\(([^\s)]+)(?:\s*=(\d+)x(\d+))?\)$/,
+  replace: (textNode, match) => {
     const altText = match[1] || '';
     const src = match[2] || '';
     const width = match[3] ? parseInt(match[3], 10) : undefined;
     const height = match[4] ? parseInt(match[4], 10) : undefined;
     
-    if (src) {
-      const imageNode = $createImageNode({
-        altText,
-        height,
-        src,
-        width,
-      });
-      
-      parentNode.replace(imageNode);
-      
-      if (!isImport) {
-        imageNode.selectNext();
-      }
-      return true;
-    }
-    return false;
+    const imageNode = $createImageNode({
+      altText,
+      height,
+      src,
+      width,
+    });
+    
+    textNode.replace(imageNode);
+    return imageNode;
   },
-  type: 'element',
+  trigger: ')',
+  type: 'text-match',
 };
 
 /**
@@ -432,5 +331,6 @@ export const CUSTOM_TRANSFORMERS: Transformer[] = [
   STRIKETHROUGH,      // ~~删除线~~
   UNDERLINE,          // ++下划线++（自定义）
 ];
+
 
 

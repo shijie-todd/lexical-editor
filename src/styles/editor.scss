@@ -235,12 +235,13 @@
 .editor-image {
   max-width: 100%;
   height: auto;
-  display: block;
+  display: inline-block;
+  cursor: default;
 }
 
 /* 图片节点装饰器容器 */
 .image-node-decorator {
-  display: block;
+  display: inline-block;
   position: relative;
   user-select: none;
 }

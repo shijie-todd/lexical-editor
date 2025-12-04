@@ -149,6 +149,7 @@ export class ImageNode extends DecoratorNode<HTMLElement> {
     if (className !== undefined) {
       span.className = className;
     }
+    // DecoratorNode 默认会自动设置 contenteditable=false
     return span;
   }
 
