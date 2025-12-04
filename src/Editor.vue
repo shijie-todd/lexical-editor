@@ -66,6 +66,7 @@ const emit = defineEmits<{
   'focus': [];
   'blur': [];
   'click-img': [url: string];
+  'change': [value: string];
 }>();
 
 const editorRef = ref<HTMLDivElement>();
@@ -300,6 +301,7 @@ const initEditor = () => {
     editorState.read(() => {
       const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
       emit('update:modelValue', markdown);
+      emit('change', markdown);
     });
   });
 
