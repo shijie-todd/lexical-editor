@@ -30,7 +30,15 @@ const changeReadonly = () => {
   <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
     
 
-    <Editor v-model="content" :readonly="readonly" @focus="handleFocus" @blur="handleBlur" @click-img="handleClickImg" @change="handleChange" />
+    <Editor 
+      v-model="content" 
+      :readonly="readonly" 
+      placeholder="开始输入内容，或输入 / 选择插入类型..."
+      @focus="handleFocus" 
+      @blur="handleBlur" 
+      @click-img="handleClickImg" 
+      @change="handleChange" 
+    />
     
     <details style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
       <summary style="cursor: pointer; font-weight: bold;">查看 Markdown 输出</summary>

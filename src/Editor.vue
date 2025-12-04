@@ -1,6 +1,13 @@
 <template>
   <div class="editor-container">
     <div ref="editorRef" class="editor-scroller">
+      <!-- Placeholder -->
+      <div 
+        v-if="isEditorEmpty && !readonly && placeholder" 
+        class="editor-placeholder"
+      >
+        {{ placeholder }}
+      </div>
       <div 
         ref="contentEditableRef" 
         class="editor" 
@@ -56,9 +63,11 @@ import {CUSTOM_TRANSFORMERS} from './utils/markdownTransformers';
 const props = withDefaults(defineProps<{
   modelValue?: string;
   readonly?: boolean;
+  placeholder?: string;
 }>(), {
   modelValue: '',
   readonly: false,
+  placeholder: '输入 / 选择插入内容...',
 });
 
 const emit = defineEmits<{
@@ -97,6 +106,9 @@ const tableActionMenuState = ref<TableActionMenuState>({
   y: 0,
   tableCellNode: null,
 });
+
+// 编辑器是否为空（用于显示 placeholder）
+const isEditorEmpty = ref(true);
 
 const theme = {
   paragraph: 'editor-paragraph',
@@ -296,12 +308,19 @@ const initEditor = () => {
 
   // 监听编辑器更新，同步到 modelValue
   editor.value.registerUpdateListener(({editorState}: {editorState: any}) => {
-    if (props.readonly || isUpdatingFromProps) return; // 只读模式或正在从 props 更新时不触发
-    
     editorState.read(() => {
-      const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
-      emit('update:modelValue', markdown);
-      emit('change', markdown);
+      const root = $getRoot();
+      const textContent = root.getTextContent();
+      
+      // 更新编辑器是否为空的状态
+      isEditorEmpty.value = textContent.trim() === '';
+      
+      // 只读模式或正在从 props 更新时不触发 emit
+      if (!props.readonly && !isUpdatingFromProps) {
+        const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
+        emit('update:modelValue', markdown);
+        emit('change', markdown);
+      }
     });
   });
 
@@ -515,10 +534,21 @@ onMounted(() => {
   padding: 16px;
   background: white;
   position: relative;
+  overflow-y: auto;
+}
+
+.editor-placeholder {
+  position: absolute;
+  top: 16px;
+  left: 48px; /* 16px padding + 32px editor padding-left */
+  color: #999;
+  pointer-events: none;
+  user-select: none;
+  font-size: 16px;
+  line-height: 1.6;
 }
 
 .editor {
-  height: 100%;
   outline: none;
   min-height: 150px;
   position: relative;
