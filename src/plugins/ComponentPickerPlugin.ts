@@ -32,6 +32,7 @@ import { $createHorizontalRuleNode } from '../nodes/HorizontalRuleNode';
 import { INSERT_IMAGE_COMMAND, type ImageUploadHandler } from './ImagesPlugin';
 import { INSERT_TABLE_COMMAND } from './TablePlugin';
 import { fileToBase64 } from '../utils/imageUpload';
+import { loadImageAndCalculateSize } from '../utils/imageUtils';
 
 // 导入 SVG 图标
 import textIcon from '../assets/text.svg';
@@ -156,9 +157,15 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
               src = await fileToBase64(file);
             }
 
+            // 加载图片并获取尺寸
+            const { width, height } = await loadImageAndCalculateSize(src, 500);
+            
             editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
               altText: file.name,
               src,
+              width,
+              height,
+              maxWidth: 500,
             });
           } catch (error) {
             console.error('Failed to upload image:', error);

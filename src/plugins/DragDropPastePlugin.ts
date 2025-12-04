@@ -11,6 +11,7 @@ import {
 } from 'lexical';
 
 import {INSERT_IMAGE_COMMAND, type ImageUploadHandler} from './ImagesPlugin';
+import { loadImageAndCalculateSize } from '../utils/imageUtils';
 
 const ACCEPTABLE_IMAGE_TYPES = [
   'image/',
@@ -57,9 +58,15 @@ export function useDragDropPastePlugin(
                 src = result;
               }
               
+              // 加载图片并获取尺寸
+              const { width, height } = await loadImageAndCalculateSize(src, 500);
+              
               editor.dispatchCommand(INSERT_IMAGE_COMMAND, {
                 altText: file.name,
                 src,
+                width,
+                height,
+                maxWidth: 500,
               });
             }
           }

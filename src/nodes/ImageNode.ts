@@ -165,41 +165,18 @@ export class ImageNode extends DecoratorNode<HTMLElement> {
   }
 
   decorate(): HTMLElement {
-    const img = document.createElement('img');
-    img.src = this.__src;
-    img.alt = this.__altText;
-    img.draggable = false;
-    
-    // 添加调试信息
-    console.log('ImageNode.decorate() called, src:', this.__src);
-    
-    // 添加错误处理
-    img.onerror = (e) => {
-      console.error('Image failed to load:', this.__src, e);
+    const container = document.createElement('div');
+    container.className = 'image-node-decorator';
+    // 存储节点数据供 Vue 组件使用
+    (container as any).__imageNodeData = {
+      src: this.__src,
+      altText: this.__altText,
+      width: this.__width,
+      height: this.__height,
+      maxWidth: this.__maxWidth,
+      nodeKey: this.getKey(),
     };
-    img.onload = () => {
-      console.log('Image loaded successfully:', this.__src);
-    };
-    
-    const style: Record<string, string> = {};
-    if (this.__width !== 'inherit') {
-      style.width = `${this.__width}px`;
-    }
-    if (this.__height !== 'inherit') {
-      style.height = `${this.__height}px`;
-    }
-    if (this.__maxWidth) {
-      style.maxWidth = `${this.__maxWidth}px`;
-    }
-    
-    Object.assign(img.style, style);
-    
-    // 确保图片有正确的显示样式
-    img.style.display = 'block';
-    img.style.maxWidth = '100%';
-    img.style.height = 'auto';
-    
-    return img;
+    return container;
   }
 }
 

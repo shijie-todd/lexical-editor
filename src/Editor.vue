@@ -227,13 +227,13 @@ const initEditor = () => {
 
   // 自定义图片上传方法
   const uploadImage = async (file: File): Promise<string> => {
-    // return 'http://localhost:5173/vite.svg'
-    return fileToBase64(file);
+    return 'http://localhost:5173/vite.svg'
+    // return fileToBase64(file);
   };
 
   // 注册插件
   // 图片插件
-  cleanupImages = useImagesPlugin(editor.value);
+  cleanupImages = useImagesPlugin(editor.value, props.readonly);
 
   // 拖拽和粘贴上传插件（处理拖拽和粘贴的图片文件）
   cleanupDragDropPaste = useDragDropPastePlugin(editor.value, {
