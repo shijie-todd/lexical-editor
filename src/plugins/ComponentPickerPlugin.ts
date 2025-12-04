@@ -255,9 +255,18 @@ const createBaseOptions = (uploadImage?: ImageUploadHandler): ComponentPickerOpt
       editor.update(() => {
         const selection = $getSelection();
         if ($isRangeSelection(selection)) {
+          // 创建分割线节点
           const hr = $createHorizontalRuleNode();
-          selection.insertNodes([hr]);
-          hr.selectNext();
+          // 创建分割线前的空段落
+          const paragraphBefore = $createParagraphNode();
+          // 创建分割线后的空段落
+          const paragraphAfter = $createParagraphNode();
+          
+          // 按顺序插入：前空段落、分割线、后空段落
+          selection.insertNodes([paragraphBefore, hr, paragraphAfter]);
+          
+          // 将光标移动到分割线后的空段落
+          paragraphAfter.select();
         }
       });
     },
@@ -341,19 +350,24 @@ export function useComponentPickerPlugin(
       li.appendChild(textSpan);
       
       li.onclick = () => {
-        // 先执行选项命令
-        option.onSelect(editor);
-        hideMenu();
-        // 然后删除包含 / 的文本节点
         editor.update(() => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const anchorNode = selection.anchor.getNode();
-            if (anchorNode instanceof TextNode && anchorNode.getTextContent().startsWith('/')) {
+            // 先删除包含 / 的文本节点
+            if (anchorNode instanceof TextNode) {
+              const parent = anchorNode.getParent();
               anchorNode.remove();
+              // 如果父节点是空的段落节点，也删除它
+              if (parent && parent.getChildrenSize() === 0 && !$isRootOrShadowRoot(parent)) {
+                parent.remove();
+              }
             }
           }
+          // 然后执行选项命令
+          option.onSelect(editor);
         });
+        hideMenu();
       };
       li.onmouseenter = () => {
         selectedIndex = index;
@@ -455,19 +469,24 @@ export function useComponentPickerPlugin(
       event.preventDefault();
       const selectedOption = options[selectedIndex];
       if (selectedOption) {
-        // 先执行选项命令
-        selectedOption.onSelect(editor);
-        hideMenu();
-        // 然后删除包含 / 的文本节点
         editor.update(() => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const anchorNode = selection.anchor.getNode();
-            if (anchorNode instanceof TextNode && anchorNode.getTextContent().startsWith('/')) {
+            // 先删除包含 / 的文本节点
+            if (anchorNode instanceof TextNode) {
+              const parent = anchorNode.getParent();
               anchorNode.remove();
+              // 如果父节点是空的段落节点，也删除它
+              if (parent && parent.getChildrenSize() === 0 && !$isRootOrShadowRoot(parent)) {
+                parent.remove();
+              }
             }
           }
+          // 然后执行选项命令
+          selectedOption.onSelect(editor);
         });
+        hideMenu();
       }
       return true;
     }

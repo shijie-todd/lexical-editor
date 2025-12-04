@@ -230,6 +230,15 @@
   border: none;
   border-top: 1px solid #e0e0e0;
   background: none;
+  transition: all 0.2s;
+}
+
+/* 分割线选中状态 */
+.editor-hr.selected {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
+  border-radius: 2px;
+  background: rgba(74, 144, 226, 0.1);
 }
 
 .editor-image {
@@ -632,5 +641,34 @@
 /* 表格选中状态 */
 .editor-table-cell-selected {
   background-color: #e8f4fd;
+}
+
+/* 表格悬浮操作按钮 */
+.table-add-rows,
+.table-add-columns {
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #666;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  transition: background-color 0.2s;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  /* display 由 JavaScript 控制 */
+}
+
+.table-add-rows:hover,
+.table-add-columns:hover {
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.table-add-rows:active,
+.table-add-columns:active {
+  background-color: #e0e0e0;
 }
 

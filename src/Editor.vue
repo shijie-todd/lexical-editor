@@ -52,6 +52,8 @@ import { useClearFormatOnEnterPlugin } from './plugins/ClearFormatOnEnterPlugin'
 import { useCodeBlockExitPlugin } from './plugins/CodeBlockExitPlugin';
 import { useTablePlugin } from './plugins/TablePlugin';
 import { useTableActionMenuPlugin, type TableActionMenuState } from './plugins/TableActionMenuPlugin';
+import { useTableHoverActionsPlugin } from './plugins/TableHoverActionsPlugin';
+import { useHorizontalRulePlugin } from './plugins/HorizontalRulePlugin';
 import TableActionMenu from './components/TableActionMenu.vue';
 import {
   $convertFromMarkdownString,
@@ -91,6 +93,8 @@ let cleanupClearFormatOnEnter: (() => void) | undefined;
 let cleanupCodeBlockExit: (() => void) | undefined;
 let cleanupTable: (() => void) | undefined;
 let cleanupTableActionMenu: (() => void) | undefined;
+let cleanupTableHoverActions: (() => void) | undefined;
+let cleanupHorizontalRule: (() => void) | undefined;
 
 // 用于防止循环更新的标志
 let isUpdatingFromProps = false;
@@ -136,6 +140,7 @@ const theme = {
   indent: 'editor-indent',
   quote: 'editor-quote',
   hr: 'editor-hr',
+  hrSelected: 'selected',
   image: 'editor-image',
   code: 'editor-code',
   table: 'editor-table',
@@ -270,8 +275,14 @@ const initEditor = () => {
   // 代码块退出插件（在代码块空行按回车时退出）
   cleanupCodeBlockExit = useCodeBlockExitPlugin(editor.value);
 
-  // 表格插件
-  cleanupTable = useTablePlugin(editor.value);
+  // 表格插件（使用官方实现，提供完整的键盘导航和表格完整性转换）
+  cleanupTable = useTablePlugin(editor.value, {
+    hasCellMerge: true,
+    hasCellBackgroundColor: true,
+    hasTabHandler: true,
+    hasHorizontalScroll: false,
+    hasNestedTables: false,
+  });
 
   // 表格操作菜单插件
   if (!props.readonly) {
@@ -280,7 +291,18 @@ const initEditor = () => {
         tableActionMenuState.value = state;
       },
     });
+
+    // 表格悬浮操作插件（在表格边缘显示添加行/列按钮）
+    if (editorRef.value) {
+      cleanupTableHoverActions = useTableHoverActionsPlugin(
+        editor.value,
+        editorRef.value,
+      );
+    }
   }
+
+  // 分割线插件（处理选中状态样式）
+  cleanupHorizontalRule = useHorizontalRulePlugin(editor.value);
 
   // 浮动文本格式工具栏（包含链接按钮）
   if (!props.readonly) {
@@ -407,6 +429,8 @@ onUnmounted(() => {
   cleanupCodeBlockExit?.();
   cleanupTable?.();
   cleanupTableActionMenu?.();
+  cleanupTableHoverActions?.();
+  cleanupHorizontalRule?.();
   
   // 清理链接观察器
   if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
@@ -464,6 +488,8 @@ watch(
       cleanupCodeBlockExit?.();
       cleanupTable?.();
       cleanupTableActionMenu?.();
+      cleanupTableHoverActions?.();
+      cleanupHorizontalRule?.();
       
       // 重置清理函数引用
       cleanupImages = undefined;
@@ -477,6 +503,8 @@ watch(
       cleanupCodeBlockExit = undefined;
       cleanupTable = undefined;
       cleanupTableActionMenu = undefined;
+      cleanupTableHoverActions = undefined;
+      cleanupHorizontalRule = undefined;
       
       // 清理链接观察器
       if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {

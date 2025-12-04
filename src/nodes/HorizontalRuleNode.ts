@@ -1,6 +1,6 @@
 /**
  * HorizontalRuleNode - 分割线节点
- * 这是一个简单的 ElementNode，渲染为 <hr> 标签
+ * 使用 DecoratorNode 防止内部输入内容
  */
 
 import type {
@@ -16,7 +16,7 @@ import type {
 
 import {
   $applyNodeReplacement,
-  ElementNode,
+  DecoratorNode,
 } from 'lexical';
 
 export type SerializedHorizontalRuleNode = Spread<
@@ -26,7 +26,7 @@ export type SerializedHorizontalRuleNode = Spread<
   SerializedLexicalNode
 >;
 
-export class HorizontalRuleNode extends ElementNode {
+export class HorizontalRuleNode extends DecoratorNode<null> {
   static getType(): string {
     return 'horizontalrule';
   }
@@ -88,6 +88,16 @@ export class HorizontalRuleNode extends ElementNode {
 
   isInline(): false {
     return false;
+  }
+
+  // DecoratorNode 必须实现 decorate 方法
+  decorate(): null {
+    return null;
+  }
+
+  // 允许通过键盘选择（按 Delete/Backspace 时会先选中）
+  isKeyboardSelectable(): true {
+    return true;
   }
 }
 

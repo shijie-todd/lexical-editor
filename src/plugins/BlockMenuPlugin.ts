@@ -13,6 +13,10 @@ import {
   type LexicalEditor,
 } from 'lexical';
 import {mergeRegister} from '@lexical/utils';
+import {
+  $isTableCellNode,
+  $getTableNodeFromLexicalNodeOrThrow,
+} from '@lexical/table';
 
 const BLOCK_MENU_CLASSNAME = 'block-menu';
 
@@ -57,8 +61,19 @@ export function useBlockMenuPlugin(
     event.stopPropagation();
     // 获取节点
     editor.update(() => {
-      const node = $getNearestNodeFromDOMNode(blockElement);
+      let node = $getNearestNodeFromDOMNode(blockElement);
       if (!node) return;
+
+      // 如果节点是表格单元格，找到父表格节点
+      if ($isTableCellNode(node)) {
+        try {
+          const tableNode = $getTableNodeFromLexicalNodeOrThrow(node);
+          node = tableNode;
+        } catch (e) {
+          // 如果获取表格节点失败，使用原节点
+          console.warn('Failed to get table node:', e);
+        }
+      }
 
       // 在节点后插入新段落并聚焦
       const newParagraph = $createParagraphNode();
@@ -117,7 +132,7 @@ export function useBlockMenuPlugin(
     const editorElement = editor.getRootElement();
     if (!editorElement) return;
 
-    // 只选择顶级 block，不包括列表项（li）和嵌套列表
+    // 只选择顶级 block，不包括列表项（li）和嵌套列表，也不包括表格
     const allBlocks = editorElement.querySelectorAll(
       'p, h1, h2, h3, ul, ol, blockquote, hr, code',
     );
@@ -133,6 +148,10 @@ export function useBlockMenuPlugin(
         if (parent && (parent.tagName.toLowerCase() === 'ul' || parent.tagName.toLowerCase() === 'ol' || parent.tagName.toLowerCase() === 'li')) {
           return false; // 这是嵌套列表，不是顶级列表
         }
+      }
+      // 过滤掉表格内的元素
+      if (block.closest('table')) {
+        return false;
       }
       return true;
     });
@@ -167,7 +186,7 @@ export function useBlockMenuPlugin(
     // 先清理已删除的 block 菜单
     cleanupRemovedMenus();
 
-    // 只选择顶级 block，不包括列表项（li）
+    // 只选择顶级 block，不包括列表项（li），也不包括表格
     // 列表（ul/ol）作为一个整体 block，列表项（li）不应该有独立的 controller
     const blocks = editorElement.querySelectorAll(
       'p, h1, h2, h3, ul, ol, blockquote, hr, code',
@@ -186,6 +205,10 @@ export function useBlockMenuPlugin(
         if (parent && (parent.tagName.toLowerCase() === 'ul' || parent.tagName.toLowerCase() === 'ol' || parent.tagName.toLowerCase() === 'li')) {
           return false; // 这是嵌套列表，不是顶级列表
         }
+      }
+      // 过滤掉表格内的元素
+      if (block.closest('table')) {
+        return false;
       }
       return true;
     });
