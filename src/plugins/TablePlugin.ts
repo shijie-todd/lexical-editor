@@ -11,7 +11,7 @@ import {
 } from '@lexical/table';
 import { mergeRegister } from '@lexical/utils';
 import type { LexicalEditor } from 'lexical';
-import { $insertNodes, $getSelection, $isRangeSelection } from 'lexical';
+import { $insertNodes, $getSelection, $isRangeSelection, $isTextNode } from 'lexical';
 
 export type InsertTableCommandPayload = Readonly<{
   columns: string;
@@ -45,12 +45,28 @@ export function useTablePlugin(editor: LexicalEditor) {
             return;
           }
           
+          // 获取当前节点和父节点
+          const anchorNode = selection.anchor.getNode();
+          const parent = anchorNode.getParent();
+          
           // 创建表格，includeHeaders 参数控制是否包含表头行
           const tableNode = $createTableNodeWithDimensions(
             rowCount,
             colCount,
             includeHeaders === true, // 默认不包含表头
           );
+          
+          // 如果当前段落只包含 / 字符或为空（来自 slash command），则替换整个段落
+          if (parent && $isTextNode(anchorNode)) {
+            const textContent = anchorNode.getTextContent().trim();
+            if (textContent === '/' || textContent === '') {
+              parent.replace(tableNode);
+              tableNode.selectStart();
+              return;
+            }
+          }
+          
+          // 否则，在当前位置插入
           $insertNodes([tableNode]);
         });
         

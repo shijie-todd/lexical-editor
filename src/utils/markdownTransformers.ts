@@ -3,24 +3,25 @@
  * 用于支持 ImageNode、HorizontalRuleNode、Table 和下划线格式
  */
 
-import type {ElementTransformer, TextFormatTransformer, TextMatchTransformer} from '@lexical/markdown';
+import type {ElementTransformer, TextFormatTransformer, TextMatchTransformer, Transformer} from '@lexical/markdown';
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
   HEADING,
-  ORDERED_LIST,
   QUOTE,
-  UNORDERED_LIST,
-  CHECK_LIST,
   CODE,
-  BOLD_STAR,
-  BOLD_UNDERSCORE,
-  ITALIC_STAR,
-  ITALIC_UNDERSCORE,
-  INLINE_CODE,
-  STRIKETHROUGH,
-  LINK,
+  TEXT_FORMAT_TRANSFORMERS,
+  TEXT_MATCH_TRANSFORMERS,
 } from '@lexical/markdown';
+import type {ListType} from '@lexical/list';
+import {
+  $createListItemNode,
+  $createListNode,
+  $isListItemNode,
+  $isListNode,
+  ListItemNode,
+  ListNode,
+} from '@lexical/list';
 import {
   $createTableCellNode,
   $createTableNode,
@@ -40,8 +41,7 @@ import {
   HorizontalRuleNode,
 } from '../nodes/HorizontalRuleNode';
 import type {ElementNode, LexicalNode} from 'lexical';
-import {$createTextNode, $isParagraphNode, $isTextNode} from 'lexical';
-import type {Transformer} from '@lexical/markdown';
+import {$isParagraphNode, $isTextNode} from 'lexical';
 
 /**
  * Horizontal Rule Transformer
@@ -123,10 +123,152 @@ export const IMAGE: TextMatchTransformer = {
     });
     
     textNode.replace(imageNode);
-    return imageNode;
   },
   trigger: ')',
   type: 'text-match',
+};
+
+/**
+ * 自定义列表 Transformers
+ * 完全独立实现，不使用 listMarkerState，避免状态键冲突
+ * 参考官方实现但简化了列表标记的保存逻辑
+ */
+
+// 列表缩进大小（4个空格 = 1级缩进）
+const LIST_INDENT_SIZE = 4;
+
+// 计算缩进级别
+function getIndent(whitespaces: string): number {
+  const tabs = whitespaces.match(/\t/g);
+  const spaces = whitespaces.match(/ /g);
+  let indent = 0;
+  if (tabs) indent += tabs.length;
+  if (spaces) indent += Math.floor(spaces.length / LIST_INDENT_SIZE);
+  return indent;
+}
+
+// 列表导出函数（简化版，不使用 listMarkerState）
+const customListExport = (
+  listNode: ListNode,
+  exportChildren: (node: any) => string,
+  depth: number,
+): string => {
+  const output = [];
+  const children = listNode.getChildren();
+  let index = 0;
+  
+  for (const listItemNode of children) {
+    if ($isListItemNode(listItemNode)) {
+      // 处理嵌套列表
+      if (listItemNode.getChildrenSize() === 1) {
+        const firstChild = listItemNode.getFirstChild();
+        if ($isListNode(firstChild)) {
+          output.push(customListExport(firstChild, exportChildren, depth + 1));
+          continue;
+        }
+      }
+      
+      const indent = ' '.repeat(depth * LIST_INDENT_SIZE);
+      const listType = listNode.getListType();
+      
+      // 生成前缀（简化版：无序列表固定使用 -）
+      const prefix =
+        listType === 'number'
+          ? `${listNode.getStart() + index}. `
+          : listType === 'check'
+            ? `- [${listItemNode.getChecked() ? 'x' : ' '}] `
+            : '- ';
+      
+      output.push(indent + prefix + exportChildren(listItemNode));
+      index++;
+    }
+  }
+  
+  return output.join('\n');
+};
+
+// 列表替换函数（简化版，不使用 listMarkerState）
+const customListReplace = (listType: ListType): ElementTransformer['replace'] => {
+  return (parentNode, children, match, isImport) => {
+    const previousNode = parentNode.getPreviousSibling();
+    const nextNode = parentNode.getNextSibling();
+    const listItem = $createListItemNode(
+      listType === 'check' ? match[3] === 'x' : undefined,
+    );
+    
+    if ($isListNode(nextNode) && nextNode.getListType() === listType) {
+      const firstChild = nextNode.getFirstChild();
+      if (firstChild !== null) {
+        firstChild.insertBefore(listItem);
+      } else {
+        nextNode.append(listItem);
+      }
+      parentNode.remove();
+    } else if (
+      $isListNode(previousNode) &&
+      previousNode.getListType() === listType
+    ) {
+      previousNode.append(listItem);
+      parentNode.remove();
+    } else {
+      const list = $createListNode(
+        listType,
+        listType === 'number' ? Number(match[2]) : undefined,
+      );
+      list.append(listItem);
+      parentNode.replace(list);
+    }
+    
+    listItem.append(...children);
+    if (!isImport) {
+      listItem.select(0, 0);
+    }
+    
+    // 处理缩进
+    const indent = getIndent(match[1] || '');
+    if (indent) {
+      listItem.setIndent(indent);
+    }
+  };
+};
+
+// 无序列表
+export const CUSTOM_UNORDERED_LIST: ElementTransformer = {
+  dependencies: [ListNode, ListItemNode],
+  export: (node, exportChildren) => {
+    return $isListNode(node) && node.getListType() === 'bullet'
+      ? customListExport(node, exportChildren, 0)
+      : null;
+  },
+  regExp: /^(\s*)[-*+]\s/,
+  replace: customListReplace('bullet'),
+  type: 'element',
+};
+
+// 有序列表
+export const CUSTOM_ORDERED_LIST: ElementTransformer = {
+  dependencies: [ListNode, ListItemNode],
+  export: (node, exportChildren) => {
+    return $isListNode(node) && node.getListType() === 'number'
+      ? customListExport(node, exportChildren, 0)
+      : null;
+  },
+  regExp: /^(\s*)(\d{1,})\.\s/,
+  replace: customListReplace('number'),
+  type: 'element',
+};
+
+// 任务列表
+export const CUSTOM_CHECK_LIST: ElementTransformer = {
+  dependencies: [ListNode, ListItemNode],
+  export: (node, exportChildren) => {
+    return $isListNode(node) && node.getListType() === 'check'
+      ? customListExport(node, exportChildren, 0)
+      : null;
+  },
+  regExp: /^(\s*)(?:[-*+]\s)?\s?(\[(\s|x)?\])\s/i,
+  replace: customListReplace('check'),
+  type: 'element',
 };
 
 /**
@@ -141,24 +283,36 @@ export const IMAGE: TextMatchTransformer = {
 const TABLE_ROW_REG_EXP = /^(?:\|)(.+)(?:\|)\s?$/;
 const TABLE_ROW_DIVIDER_REG_EXP = /^(\| ?:?-+:? ?)+\|\s?$/;
 
+// 表格单元格专用 transformers（不包含列表和代码块，避免递归冲突）
+const TABLE_CELL_TRANSFORMERS: Transformer[] = [
+  HEADING,
+  QUOTE,
+  HORIZONTAL_RULE,
+  IMAGE,
+  ...TEXT_FORMAT_TRANSFORMERS,
+  ...TEXT_MATCH_TRANSFORMERS,
+  UNDERLINE,
+];
+
 function getTableColumnsSize(table: TableNode) {
   const row = table.getFirstChild();
   return $isTableRowNode(row) ? row.getChildrenSize() : 0;
 }
 
-function $createTableCell(textContent: string, transformers: Transformer[]): TableCellNode {
+function $createTableCell(textContent: string): TableCellNode {
   const cleanedText = textContent.replace(/\\n/g, '\n');
   const cell = $createTableCellNode(TableCellHeaderStates.NO_STATUS);
-  $convertFromMarkdownString(cleanedText, transformers, cell);
+  // 使用不包含列表的 transformers，避免状态键冲突
+  $convertFromMarkdownString(cleanedText, TABLE_CELL_TRANSFORMERS, cell);
   return cell;
 }
 
-function mapToTableCells(textContent: string, transformers: Transformer[]): Array<TableCellNode> | null {
+function mapToTableCells(textContent: string): Array<TableCellNode> | null {
   const match = textContent.match(TABLE_ROW_REG_EXP);
   if (!match || !match[1]) {
     return null;
   }
-  return match[1].split('|').map((text) => $createTableCell(text.trim(), transformers));
+  return match[1].split('|').map((text) => $createTableCell(text.trim()));
 }
 
 export const TABLE: ElementTransformer = {
@@ -179,7 +333,7 @@ export const TABLE: ElementTransformer = {
       let isHeaderRow = false;
       for (const cell of row.getChildren()) {
         if ($isTableCellNode(cell)) {
-          const cellContent = $convertToMarkdownString(CUSTOM_TRANSFORMERS, cell)
+          const cellContent = $convertToMarkdownString(TABLE_CELL_TRANSFORMERS, cell)
             .replace(/\n/g, '\\n')
             .trim();
           rowOutput.push(cellContent || ' ');
@@ -233,7 +387,7 @@ export const TABLE: ElementTransformer = {
       return;
     }
 
-    const matchCells = mapToTableCells(matchText, CUSTOM_TRANSFORMERS);
+    const matchCells = mapToTableCells(matchText);
 
     if (matchCells == null) {
       return;
@@ -259,7 +413,7 @@ export const TABLE: ElementTransformer = {
         break;
       }
 
-      const cells = mapToTableCells(firstChild.getTextContent(), CUSTOM_TRANSFORMERS);
+      const cells = mapToTableCells(firstChild.getTextContent());
 
       if (cells == null) {
         break;
@@ -280,7 +434,7 @@ export const TABLE: ElementTransformer = {
 
       for (let i = 0; i < maxCells; i++) {
         const cell = i < cells.length ? cells[i] : undefined;
-        tableRow.append(cell || $createTableCell('', CUSTOM_TRANSFORMERS));
+        tableRow.append(cell || $createTableCell(''));
       }
     }
 
@@ -302,34 +456,27 @@ export const TABLE: ElementTransformer = {
 
 /**
  * 自定义 Transformers 集合
- * 包含所有需要的 transformers
+ * 使用完全自定义的列表 transformers，避免 listMarkerState 状态键冲突
  * 
- * 注意：
- * - 文本格式 transformer 的顺序很重要
- * - 行内代码应该放在最前面，因为它会阻止内部的转换
- * - 更长的标签应该在更短的标签之前（如 ** 或 __ 应该在 * 或 _ 之前）
- * - 表格必须放在前面，以便正确解析 Markdown 表格
+ * 关键改动：
+ * 1. 自定义列表 transformers（不使用 listMarkerState）
+ * 2. 不使用官方的 ELEMENT_TRANSFORMERS（包含官方列表 transformers）
+ * 3. 手动添加 HEADING, QUOTE, CODE
+ * 4. 表格单元格使用独立的 transformers 集合
  */
 export const CUSTOM_TRANSFORMERS: Transformer[] = [
-  // 块级元素 transformers
-  TABLE,              // 表格（优先）
-  HEADING,
-  QUOTE,
-  CODE,               // 代码块（```code```）
-  ORDERED_LIST,
-  UNORDERED_LIST,
-  CHECK_LIST,
-  HORIZONTAL_RULE,
-  IMAGE,
-  LINK,
-  // 文本格式 transformers（按优先级排序）
-  INLINE_CODE,        // `行内代码` - 优先，避免内部转换
-  BOLD_STAR,          // **粗体**
-  BOLD_UNDERSCORE,    // __粗体__
-  ITALIC_STAR,        // *斜体*
-  ITALIC_UNDERSCORE,  // _斜体_
-  STRIKETHROUGH,      // ~~删除线~~
-  UNDERLINE,          // ++下划线++（自定义）
+  TABLE,                          // 自定义表格
+  HORIZONTAL_RULE,                // 自定义分隔线
+  IMAGE,                          // 自定义图片（支持尺寸）
+  HEADING,                        // 标题
+  QUOTE,                          // 引用
+  CODE,                           // 代码块
+  CUSTOM_CHECK_LIST,              // 自定义任务列表（优先）
+  CUSTOM_ORDERED_LIST,            // 自定义有序列表
+  CUSTOM_UNORDERED_LIST,          // 自定义无序列表
+  ...TEXT_FORMAT_TRANSFORMERS,    // 粗体、斜体、删除线等
+  ...TEXT_MATCH_TRANSFORMERS,     // 链接等
+  UNDERLINE,                      // 自定义下划线（++text++）
 ];
 
 

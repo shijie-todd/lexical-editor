@@ -186,6 +186,8 @@ const initEditor = () => {
   // 注册 RichText 功能
   registerRichText(editor.value);
 
+  // 设置根元素（必须在内容初始化之前设置）
+  editor.value.setRootElement(contentEditableRef.value);
 
   // 注册链接命令处理器
   editor.value.registerCommand(
@@ -212,17 +214,17 @@ const initEditor = () => {
     root.clear();
     
     // 如果提供了 modelValue（markdown），则从 markdown 转换
-    if (props.modelValue) {
+    if (props.modelValue && props.modelValue.trim()) {
       $convertFromMarkdownString(props.modelValue, CUSTOM_TRANSFORMERS);
+      // 手动更新 isEditorEmpty 状态
+      isEditorEmpty.value = false;
     } else {
       // 否则添加一个空段落
       const paragraph = $createParagraphNode();
       root.append(paragraph);
+      isEditorEmpty.value = true;
     }
-  }, { discrete: true });
-
-  // 设置根元素
-  editor.value.setRootElement(contentEditableRef.value);
+  });
 
   // 自定义图片上传方法（示例）
   const uploadImage = async (): Promise<string> => {
@@ -256,6 +258,7 @@ const initEditor = () => {
   cleanupListPlugin = useListPlugin(editor.value, {
     hasStrictIndent: false,
     maxIndent: 7, // 与 playground 保持一致
+    enableTabIndentation: false, // 禁用 Tab 键嵌套功能
   });
 
   // 注册 Checklist 功能
@@ -318,13 +321,6 @@ const initEditor = () => {
         emit('change', markdown);
       }
     });
-  });
-
-  // 确保编辑器可以聚焦
-  nextTick(() => {
-    if (contentEditableRef.value && !props.readonly) {
-      contentEditableRef.value.focus();
-    }
   });
 };
 
@@ -442,7 +438,7 @@ watch(
           root.append(paragraph);
         }
       }
-    }, { discrete: true });
+    });
     
     // 使用 nextTick 确保更新完成后再重置标志
     nextTick(() => {
@@ -510,7 +506,10 @@ watch(isLinkEditMode, () => {
 });
 
 onMounted(() => {
-  initEditor();
+  // 使用 nextTick 确保 DOM 已经渲染完成
+  nextTick(() => {
+    initEditor();
+  });
 });
 </script>
 

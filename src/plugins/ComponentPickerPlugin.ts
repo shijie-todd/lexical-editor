@@ -341,8 +341,10 @@ export function useComponentPickerPlugin(
       li.appendChild(textSpan);
       
       li.onclick = () => {
+        // 先执行选项命令
         option.onSelect(editor);
         hideMenu();
+        // 然后删除包含 / 的文本节点
         editor.update(() => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
@@ -363,9 +365,44 @@ export function useComponentPickerPlugin(
     menuElement.appendChild(ul);
 
     const rect = anchorElement.getBoundingClientRect();
+    
+    // 先设置基础位置以便获取菜单尺寸
     menuElement.style.top = `${rect.bottom + window.scrollY}px`;
     menuElement.style.left = `${rect.left + window.scrollX}px`;
-    // todo: 当菜单超出屏幕时，需要调整位置，具体策略是，当菜单的底部超出屏幕时，需要将菜单向上移动，当菜单的顶部超出屏幕时，需要将菜单向下移动
+    
+    // 获取菜单尺寸和视口尺寸
+    const menuRect = menuElement.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    
+    // 垂直位置调整：检查菜单底部是否超出视口
+    let finalTop = rect.bottom + window.scrollY;
+    if (menuRect.bottom > viewportHeight) {
+      // 菜单底部超出视口，尝试将菜单显示在锚点元素上方
+      const topPosition = rect.top + window.scrollY - menuRect.height;
+      if (topPosition >= window.scrollY) {
+        // 上方有足够空间，将菜单移到上方
+        finalTop = topPosition;
+      } else {
+        // 上方空间不足，保持在下方但调整到视口底部
+        finalTop = viewportHeight - menuRect.height + window.scrollY;
+      }
+    }
+    
+    // 水平位置调整：检查菜单右边是否超出视口
+    let finalLeft = rect.left + window.scrollX;
+    if (menuRect.right > viewportWidth) {
+      // 菜单右边超出视口，将菜单左对齐到视口右边界
+      finalLeft = viewportWidth - menuRect.width + window.scrollX;
+    }
+    // 确保菜单不会超出左边界
+    if (finalLeft < window.scrollX) {
+      finalLeft = window.scrollX;
+    }
+    
+    // 应用最终位置
+    menuElement.style.top = `${finalTop}px`;
+    menuElement.style.left = `${finalLeft}px`;
   };
 
   const updateMenu = () => {
@@ -418,8 +455,10 @@ export function useComponentPickerPlugin(
       event.preventDefault();
       const selectedOption = options[selectedIndex];
       if (selectedOption) {
+        // 先执行选项命令
         selectedOption.onSelect(editor);
         hideMenu();
+        // 然后删除包含 / 的文本节点
         editor.update(() => {
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
