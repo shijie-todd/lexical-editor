@@ -6,6 +6,8 @@
         class="editor" 
         :contenteditable="!readonly" 
         @click="handleEditorClick"
+        @focus="handleEditorFocus"
+        @blur="handleEditorBlur"
       ></div>
       <!-- 表格操作菜单 -->
       <TableActionMenu
@@ -61,6 +63,9 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   'update:modelValue': [value: string];
+  'focus': [];
+  'blur': [];
+  'click-img': [url: string];
 }>();
 
 const editorRef = ref<HTMLDivElement>();
@@ -307,9 +312,17 @@ const initEditor = () => {
 };
 
 const handleEditorClick = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  
+  // 检测图片点击
+  const img = target.closest('img');
+  if (img && img.src) {
+    emit('click-img', img.src);
+    return;
+  }
+  
   // 在只读模式下，处理链接点击
   if (props.readonly) {
-    const target = event.target as HTMLElement;
     const link = target.closest('a');
     if (link && link.href) {
       event.preventDefault();
@@ -322,6 +335,14 @@ const handleEditorClick = (event: MouseEvent) => {
   if (contentEditableRef.value && event.target === contentEditableRef.value) {
     contentEditableRef.value.focus();
   }
+};
+
+const handleEditorFocus = () => {
+  emit('focus');
+};
+
+const handleEditorBlur = () => {
+  emit('blur');
 };
 
 // 设置只读模式下的链接行为
