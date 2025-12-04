@@ -436,34 +436,50 @@ watch(
   },
 );
 
-// 监听 readonly 变化
+// 监听 readonly 变化，重新初始化编辑器
 watch(
   () => props.readonly,
-  (newValue) => {
+  () => {
     if (editor.value) {
-      editor.value.setEditable(!newValue);
+      // 清理现有编辑器和插件
+      cleanupImages?.();
+      cleanupPicker?.();
+      cleanupBlockMenu?.();
+      cleanupListPlugin?.();
+      cleanupDragDropPaste?.();
+      cleanupFloatingToolbar?.();
+      cleanupLinkEditor?.();
+      cleanupClearFormatOnEnter?.();
+      cleanupCodeBlockExit?.();
+      cleanupTable?.();
+      cleanupTableActionMenu?.();
       
-      // 如果切换到只读模式，设置链接行为
-      if (newValue) {
-        nextTick(() => {
-          setupReadonlyLinkBehavior();
-        });
-      } else {
-        // 如果切换到编辑模式，移除链接的 target 属性
-        if (contentEditableRef.value) {
-          const links = contentEditableRef.value.querySelectorAll('a');
-          links.forEach((link) => {
-            link.removeAttribute('data-readonly-processed');
-            // 保留 target 和 rel，因为用户可能需要它们
-          });
-          
-          // 断开观察器
-          if ((contentEditableRef.value as any).__linkObserver) {
-            (contentEditableRef.value as any).__linkObserver.disconnect();
-            delete (contentEditableRef.value as any).__linkObserver;
-          }
-        }
+      // 重置清理函数引用
+      cleanupImages = undefined;
+      cleanupPicker = undefined;
+      cleanupBlockMenu = undefined;
+      cleanupListPlugin = undefined;
+      cleanupDragDropPaste = undefined;
+      cleanupFloatingToolbar = undefined;
+      cleanupLinkEditor = undefined;
+      cleanupClearFormatOnEnter = undefined;
+      cleanupCodeBlockExit = undefined;
+      cleanupTable = undefined;
+      cleanupTableActionMenu = undefined;
+      
+      // 清理链接观察器
+      if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
+        (contentEditableRef.value as any).__linkObserver.disconnect();
+        delete (contentEditableRef.value as any).__linkObserver;
       }
+      
+      // 移除根元素
+      editor.value.setRootElement(null);
+      
+      // 重新初始化编辑器
+      nextTick(() => {
+        initEditor();
+      });
     }
   },
 );
@@ -487,12 +503,13 @@ onMounted(() => {
 .editor-container {
   position: relative;
   width: 100%;
-  max-width: 800px;
-  margin: 0 auto;
+  height: 100%;
+  min-height: 200px;
+  padding: 12px;
 }
 
 .editor-scroller {
-  min-height: 200px;
+  height: 100%;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 16px;
@@ -501,6 +518,7 @@ onMounted(() => {
 }
 
 .editor {
+  height: 100%;
   outline: none;
   min-height: 150px;
   position: relative;
