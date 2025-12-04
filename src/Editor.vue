@@ -53,7 +53,6 @@ import { useCodeBlockExitPlugin } from './plugins/CodeBlockExitPlugin';
 import { useTablePlugin } from './plugins/TablePlugin';
 import { useTableActionMenuPlugin, type TableActionMenuState } from './plugins/TableActionMenuPlugin';
 import TableActionMenu from './components/TableActionMenu.vue';
-import { fileToBase64 } from './utils/imageUpload';
 import {
   $convertFromMarkdownString,
   $convertToMarkdownString,
@@ -225,10 +224,9 @@ const initEditor = () => {
   // 设置根元素
   editor.value.setRootElement(contentEditableRef.value);
 
-  // 自定义图片上传方法
-  const uploadImage = async (file: File): Promise<string> => {
-    return 'http://localhost:5173/vite.svg'
-    // return fileToBase64(file);
+  // 自定义图片上传方法（示例）
+  const uploadImage = async (): Promise<string> => {
+    return 'http://localhost:5173/vite.svg';
   };
 
   // 注册插件
@@ -309,15 +307,13 @@ const initEditor = () => {
   // 监听编辑器更新，同步到 modelValue
   editor.value.registerUpdateListener(({editorState}: {editorState: any}) => {
     editorState.read(() => {
-      const root = $getRoot();
-      const textContent = root.getTextContent();
+      const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
       
-      // 更新编辑器是否为空的状态
-      isEditorEmpty.value = textContent.trim() === '';
+      // 判断编辑器是否为空：检查 markdown 内容长度
+      isEditorEmpty.value = markdown.trim().length === 0;
       
       // 只读模式或正在从 props 更新时不触发 emit
       if (!props.readonly && !isUpdatingFromProps) {
-        const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
         emit('update:modelValue', markdown);
         emit('change', markdown);
       }

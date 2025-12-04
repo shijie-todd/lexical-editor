@@ -114,7 +114,6 @@ const handleResizeEnd = (width: number, height: number) => {
 <style scoped>
 .image-wrapper {
   display: inline-block;
-  margin: 16px 0;
   position: relative;
   max-width: 100%;
 }
