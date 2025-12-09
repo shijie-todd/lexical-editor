@@ -263,7 +263,8 @@ const initEditor = () => {
   cleanupListPlugin = useListPlugin(editor.value, {
     hasStrictIndent: false,
     maxIndent: 7, // 与 playground 保持一致
-    enableTabIndentation: false, // 禁用 Tab 键嵌套功能
+    enableTabIndentation: true, // 启用 Tab 键缩进功能（用于有序和无序列表）
+    disableChecklistTabIndentation: true, // 仅禁用 checklist 的 Tab 键功能
   });
 
   // 注册 Checklist 功能

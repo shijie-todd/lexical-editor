@@ -2,15 +2,7 @@
 import { ref } from 'vue'
 import Editor from './Editor.vue'
 
-const content = ref(`# asdad
-
-1. adsada
-    1. asdasd
-
-- asdsadad
-    - asdsadsad
-
-- [ ] sdadasda`)
+const content = ref(``)
 
 const handleFocus = () => {
   // console.log('编辑器获得焦点')

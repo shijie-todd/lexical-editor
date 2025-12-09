@@ -354,13 +354,30 @@ export function useComponentPickerPlugin(
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const anchorNode = selection.anchor.getNode();
-            // 先删除包含 / 的文本节点
+            // 先删除包含 / 的文本节点内容
             if (anchorNode instanceof TextNode) {
               const parent = anchorNode.getParent();
-              anchorNode.remove();
-              // 如果父节点是空的段落节点，也删除它
-              if (parent && parent.getChildrenSize() === 0 && !$isRootOrShadowRoot(parent)) {
-                parent.remove();
+              const text = anchorNode.getTextContent();
+              const slashIndex = text.indexOf('/');
+              
+              if (slashIndex !== -1) {
+                // 删除从 / 开始的所有文本
+                const newText = text.substring(0, slashIndex);
+                
+                // 如果删除后只剩空白，且父节点不是普通段落
+                if (newText.trim().length === 0 && parent && !$isRootOrShadowRoot(parent) && parent.getType() !== 'paragraph') {
+                  // 创建一个普通段落替换当前节点
+                  const newParagraph = $createParagraphNode();
+                  parent.replace(newParagraph);
+                  newParagraph.select();
+                } else {
+                  // 否则只更新文本内容
+                  anchorNode.setTextContent(newText);
+                  // 将光标移动到父节点末尾
+                  if (parent) {
+                    parent.selectEnd();
+                  }
+                }
               }
             }
           }
@@ -473,13 +490,30 @@ export function useComponentPickerPlugin(
           const selection = $getSelection();
           if ($isRangeSelection(selection)) {
             const anchorNode = selection.anchor.getNode();
-            // 先删除包含 / 的文本节点
+            // 先删除包含 / 的文本节点内容
             if (anchorNode instanceof TextNode) {
               const parent = anchorNode.getParent();
-              anchorNode.remove();
-              // 如果父节点是空的段落节点，也删除它
-              if (parent && parent.getChildrenSize() === 0 && !$isRootOrShadowRoot(parent)) {
-                parent.remove();
+              const text = anchorNode.getTextContent();
+              const slashIndex = text.indexOf('/');
+              
+              if (slashIndex !== -1) {
+                // 删除从 / 开始的所有文本
+                const newText = text.substring(0, slashIndex);
+                
+                // 如果删除后只剩空白，且父节点不是普通段落
+                if (newText.trim().length === 0 && parent && !$isRootOrShadowRoot(parent) && parent.getType() !== 'paragraph') {
+                  // 创建一个普通段落替换当前节点
+                  const newParagraph = $createParagraphNode();
+                  parent.replace(newParagraph);
+                  newParagraph.select();
+                } else {
+                  // 否则只更新文本内容
+                  anchorNode.setTextContent(newText);
+                  // 将光标移动到父节点末尾
+                  if (parent) {
+                    parent.selectEnd();
+                  }
+                }
               }
             }
           }
