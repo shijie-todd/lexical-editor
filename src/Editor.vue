@@ -38,6 +38,8 @@ import { ListNode, ListItemNode, registerCheckList } from '@lexical/list';
 import { LinkNode, AutoLinkNode, TOGGLE_LINK_COMMAND, $toggleLink } from '@lexical/link';
 import { CodeNode, CodeHighlightNode } from '@lexical/code';
 import { ParagraphNode, TextNode } from 'lexical';
+// import { uploadFileToCos } from "@/utils/upload-helper";
+import { fileToBase64 } from './utils/imageUpload';
 import { HorizontalRuleNode } from './nodes/HorizontalRuleNode';
 import { ImageNode } from './nodes/ImageNode';
 import { TableNode, TableCellNode, TableRowNode } from '@lexical/table';
@@ -232,10 +234,14 @@ const initEditor = () => {
   });
 
   // 自定义图片上传方法（示例）
-  const uploadImage = async (): Promise<string> => {
-    return 'http://localhost:5173/vite.svg';
+  const uploadImage = async (file: File): Promise<string> => {
+    // try {
+    //   const url = await uploadFileToCos(file)
+    //   return url
+    // } catch {
+      return fileToBase64(file);
+    // }
   };
-
   // 注册插件
   // 图片插件
   cleanupImages = useImagesPlugin(editor.value, props.readonly);

@@ -557,6 +557,17 @@ export function useComponentPickerPlugin(
           return;
         }
 
+        // 检查是否在代码块内
+        let currentNode: any = anchorNode;
+        while (currentNode) {
+          if ($isCodeNode(currentNode)) {
+            // 在代码块内，不显示 slash command 菜单
+            hideMenu();
+            return;
+          }
+          currentNode = currentNode.getParent();
+        }
+
         // 检查是否在 block 的开头
         const parentNode = anchorNode.getParent();
         if (!parentNode || $isRootOrShadowRoot(parentNode)) {
