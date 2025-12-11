@@ -46,6 +46,13 @@
   padding-left: 0;
   color: #333;
   list-style-position: outside;
+  list-style-type: disc;
+  :is(dir,menu,ol,ul) {
+    list-style-type: circle;
+    & ul {
+      list-style-type: square;
+    }
+  }
 }
 
 .editor-list-ol {
@@ -55,7 +62,7 @@
   padding-left: 0;
   color: #333;
   list-style-position: outside;
-  /* 第一层不设置 list-style-type，使用默认的 decimal (1, 2, 3) */
+  list-style-type: decimal;
 }
 
 .editor-list-ol2 {
