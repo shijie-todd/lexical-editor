@@ -56,6 +56,7 @@ import { useTablePlugin } from './plugins/TablePlugin';
 import { useTableActionMenuPlugin, type TableActionMenuState } from './plugins/TableActionMenuPlugin';
 import { useTableHoverActionsPlugin } from './plugins/TableHoverActionsPlugin';
 import { useHorizontalRulePlugin } from './plugins/HorizontalRulePlugin';
+import { useMarkdownShortcutPlugin } from './plugins/MarkdownShortcutPlugin';
 import TableActionMenu from './components/TableActionMenu.vue';
 import {
   $convertFromMarkdownString,
@@ -97,6 +98,7 @@ let cleanupTable: (() => void) | undefined;
 let cleanupTableActionMenu: (() => void) | undefined;
 let cleanupTableHoverActions: (() => void) | undefined;
 let cleanupHorizontalRule: (() => void) | undefined;
+let cleanupMarkdownShortcut: (() => void) | undefined;
 
 // 用于防止循环更新的标志
 let isUpdatingFromProps = false;
@@ -311,6 +313,11 @@ const initEditor = () => {
   // 分割线插件（处理选中状态样式）
   cleanupHorizontalRule = useHorizontalRulePlugin(editor.value);
 
+  // Markdown 实时转换插件（仅在非只读模式下启用）
+  if (!props.readonly) {
+    cleanupMarkdownShortcut = useMarkdownShortcutPlugin(editor.value);
+  }
+
   // 浮动文本格式工具栏（包含链接按钮）
   if (!props.readonly) {
     cleanupFloatingToolbar = useFloatingTextFormatToolbarPlugin(editor.value, {
@@ -438,6 +445,7 @@ onUnmounted(() => {
   cleanupTableActionMenu?.();
   cleanupTableHoverActions?.();
   cleanupHorizontalRule?.();
+  cleanupMarkdownShortcut?.();
   
   // 清理链接观察器
   if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
@@ -497,6 +505,7 @@ watch(
       cleanupTableActionMenu?.();
       cleanupTableHoverActions?.();
       cleanupHorizontalRule?.();
+      cleanupMarkdownShortcut?.();
       
       // 重置清理函数引用
       cleanupImages = undefined;
@@ -512,6 +521,7 @@ watch(
       cleanupTableActionMenu = undefined;
       cleanupTableHoverActions = undefined;
       cleanupHorizontalRule = undefined;
+      cleanupMarkdownShortcut = undefined;
       
       // 清理链接观察器
       if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
