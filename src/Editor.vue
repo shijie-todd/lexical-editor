@@ -224,7 +224,7 @@ const initEditor = () => {
     
     // 如果提供了 modelValue（markdown），则从 markdown 转换
     if (props.modelValue && props.modelValue.trim()) {
-      $convertFromMarkdownString(props.modelValue, CUSTOM_TRANSFORMERS);
+      $convertFromMarkdownString(props.modelValue, CUSTOM_TRANSFORMERS, undefined, true);
       // 手动更新 isEditorEmpty 状态
       isEditorEmpty.value = false;
     } else {
@@ -346,7 +346,7 @@ const initEditor = () => {
   // 监听编辑器更新，同步到 modelValue
   editor.value.registerUpdateListener(({editorState}: {editorState: any}) => {
     editorState.read(() => {
-      const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
+      const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
       
       // 判断编辑器是否为空：检查 markdown 内容长度
       isEditorEmpty.value = markdown.trim().length === 0;
@@ -465,13 +465,13 @@ watch(
     isUpdatingFromProps = true;
     editor.value.update(() => {
       const root = $getRoot();
-      const currentMarkdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS);
+      const currentMarkdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
       
       // 只有当 markdown 内容不同时才更新，避免循环更新
       if (currentMarkdown !== newValue) {
         root.clear();
         if (newValue) {
-          $convertFromMarkdownString(newValue, CUSTOM_TRANSFORMERS);
+          $convertFromMarkdownString(newValue, CUSTOM_TRANSFORMERS, undefined, true);
         } else {
           const paragraph = $createParagraphNode();
           root.append(paragraph);
