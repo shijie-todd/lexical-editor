@@ -297,10 +297,102 @@
   font-family: 'Fira Code', 'Courier New', Consolas, Monaco, monospace;
   font-size: 0.9em;
   color: #e74c3c;
-  /* 行内代码不应该有其他文本装饰 */
-  text-decoration: none !important;
-  font-weight: normal !important;
-  font-style: normal !important;
+}
+
+/* 代码块操作菜单 */
+.code-action-menu-container {
+  height: 35.8px;
+  font-size: 10px;
+  color: rgba(0, 0, 0, 0.5);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  user-select: none;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 4px;
+  gap: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.code-action-menu-container .code-highlight-language {
+  margin-right: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+}
+
+.code-action-menu-container .code-language-select {
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  color: rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  outline: none;
+  min-width: 100px;
+}
+
+.code-action-menu-container .code-language-select:hover {
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.code-action-menu-container .code-language-select:focus {
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.2);
+}
+
+.code-action-menu-container button.menu-item {
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 4px;
+  background: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0, 0, 0, 0.5);
+  width: 28px;
+  height: 28px;
+  transition: all 0.2s;
+}
+
+.code-action-menu-container button.menu-item i.format {
+  height: 16px;
+  width: 16px;
+  opacity: 0.6;
+  display: flex;
+  color: rgba(0, 0, 0, 0.5);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* 图标样式 */
+.code-action-menu-container button.menu-item i.format.copy {
+  background-image: url('../assets/copy.svg');
+}
+
+.code-action-menu-container button.menu-item i.format.success {
+  background-image: url('../assets/success.svg');
+}
+
+
+.code-action-menu-container button.menu-item:hover {
+  border: 1px solid rgba(0, 0, 0, 0.3);
+  opacity: 0.9;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.code-action-menu-container button.menu-item:active {
+  background-color: rgba(223, 232, 250);
+  border: 1px solid rgba(0, 0, 0, 0.45);
 }
 
 /* 代码块样式 */
@@ -319,6 +411,11 @@
   tab-size: 2;
   white-space: pre;
   position: relative; /* 为 block menu 定位提供参考 */
+  
+  /* 行内代码不应该有其他文本装饰 */
+  text-decoration: none !important;
+  font-weight: normal !important;
+  font-style: normal !important;
 }
 
 /* 代码块内的所有内容都不应该有任何文本装饰 */

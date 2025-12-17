@@ -36,7 +36,7 @@ import { createEditor, $getRoot, $createParagraphNode } from 'lexical';
 import { HeadingNode, QuoteNode, registerRichText } from '@lexical/rich-text';
 import { ListNode, ListItemNode, registerCheckList } from '@lexical/list';
 import { LinkNode, AutoLinkNode, TOGGLE_LINK_COMMAND, $toggleLink } from '@lexical/link';
-import { CodeNode, CodeHighlightNode } from '@lexical/code';
+import { CodeNode } from '@lexical/code';
 import { ParagraphNode, TextNode } from 'lexical';
 // import { uploadFileToCos } from "@/utils/upload-helper";
 import { fileToBase64 } from './utils/imageUpload';
@@ -57,6 +57,7 @@ import { useTableActionMenuPlugin, type TableActionMenuState } from './plugins/T
 import { useTableHoverActionsPlugin } from './plugins/TableHoverActionsPlugin';
 import { useHorizontalRulePlugin } from './plugins/HorizontalRulePlugin';
 import { useMarkdownShortcutPlugin } from './plugins/MarkdownShortcutPlugin';
+import { useCodeActionMenuPlugin } from './plugins/CodeActionMenuPlugin';
 import TableActionMenu from './components/TableActionMenu.vue';
 import {
   $convertFromMarkdownString,
@@ -98,6 +99,7 @@ let cleanupTable: (() => void) | undefined;
 let cleanupTableActionMenu: (() => void) | undefined;
 let cleanupTableHoverActions: (() => void) | undefined;
 let cleanupHorizontalRule: (() => void) | undefined;
+let cleanupCodeActionMenu: (() => void) | undefined;
 let cleanupMarkdownShortcut: (() => void) | undefined;
 
 // 用于防止循环更新的标志
@@ -170,7 +172,6 @@ const getEditorConfig = () => {
       LinkNode,
       AutoLinkNode,
       CodeNode,
-      CodeHighlightNode,
       ParagraphNode,
       TextNode,
       QuoteNode,
@@ -313,6 +314,13 @@ const initEditor = () => {
   // 分割线插件（处理选中状态样式）
   cleanupHorizontalRule = useHorizontalRulePlugin(editor.value);
 
+  // 代码块操作菜单插件（语言选择、复制、格式化）
+  if (!props.readonly && editorRef.value) {
+    cleanupCodeActionMenu = useCodeActionMenuPlugin(editor.value, {
+      anchorElem: editorRef.value,
+    });
+  }
+
   // Markdown 实时转换插件（仅在非只读模式下启用）
   if (!props.readonly) {
     cleanupMarkdownShortcut = useMarkdownShortcutPlugin(editor.value);
@@ -446,6 +454,7 @@ onUnmounted(() => {
   cleanupTableHoverActions?.();
   cleanupHorizontalRule?.();
   cleanupMarkdownShortcut?.();
+  cleanupCodeActionMenu?.();
   
   // 清理链接观察器
   if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
@@ -506,6 +515,7 @@ watch(
       cleanupTableHoverActions?.();
       cleanupHorizontalRule?.();
       cleanupMarkdownShortcut?.();
+      cleanupCodeActionMenu?.();
       
       // 重置清理函数引用
       cleanupImages = undefined;
@@ -522,6 +532,7 @@ watch(
       cleanupTableHoverActions = undefined;
       cleanupHorizontalRule = undefined;
       cleanupMarkdownShortcut = undefined;
+      cleanupCodeActionMenu = undefined;
       
       // 清理链接观察器
       if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
