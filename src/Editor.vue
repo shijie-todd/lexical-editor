@@ -399,6 +399,8 @@ const handleEditorClick = (event: MouseEvent) => {
   // 检测图片点击
   const img = target.closest('img');
   if (img && img.src) {
+    event.preventDefault();
+    event.stopPropagation();
     emit('click-img', img.src);
     return;
   }
