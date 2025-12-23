@@ -13,8 +13,6 @@
         class="editor" 
         :contenteditable="!readonly" 
         @click="handleEditorClick"
-        @focus="handleEditorFocus"
-        @blur="handleEditorBlur"
       ></div>
       <!-- 表格操作菜单 -->
       <TableActionMenu
@@ -32,7 +30,7 @@
 <script setup lang="ts">
 import './styles/editor.scss';
 import { ref, onMounted, onUnmounted, nextTick, watch } from 'vue';
-import { createEditor, $getRoot, $createParagraphNode } from 'lexical';
+import { createEditor, $getRoot, $createParagraphNode, FOCUS_COMMAND, BLUR_COMMAND, COMMAND_PRIORITY_LOW } from 'lexical';
 import { HeadingNode, QuoteNode, registerRichText } from '@lexical/rich-text';
 import { ListNode, ListItemNode, registerCheckList } from '@lexical/list';
 import { LinkNode, AutoLinkNode, TOGGLE_LINK_COMMAND, $toggleLink } from '@lexical/link';
@@ -74,7 +72,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   defaultValue: '',
   readonly: false,
-  placeholder: '输入 / 选择插入内容...',
+  placeholder: '输入 / 开始创作之旅...',
   autofocus: false,
   defaultSelection: 'rootStart',
 });
@@ -105,6 +103,9 @@ let cleanupHorizontalRule: (() => void) | undefined;
 let cleanupCodeActionMenu: (() => void) | undefined;
 let cleanupMarkdownShortcut: (() => void) | undefined;
 
+// Focus 和 Blur 命令的清理函数
+let unregisterFocus: (() => void) | undefined;
+let unregisterBlur: (() => void) | undefined;
 
 // 链接编辑模式状态
 const isLinkEditMode = ref(false);
@@ -188,6 +189,39 @@ const getEditorConfig = () => {
   };
 };
 
+// 注册 FOCUS_COMMAND 和 BLUR_COMMAND 监听器
+const registerFocusBlurCommands = () => {
+  if (!editor.value) return;
+  
+  // 注册 FOCUS_COMMAND 处理器（监听编辑器获得焦点）
+  unregisterFocus = editor.value.registerCommand(
+    FOCUS_COMMAND,
+    () => {
+      emit('focus');
+      return false; // 不阻止其他处理器
+    },
+    COMMAND_PRIORITY_LOW,
+  );
+
+  // 注册 BLUR_COMMAND 处理器（监听编辑器失去焦点）
+  unregisterBlur = editor.value.registerCommand(
+    BLUR_COMMAND,
+    () => {
+      emit('blur');
+      return false; // 不阻止其他处理器
+    },
+    COMMAND_PRIORITY_LOW,
+  );
+};
+
+// 取消注册 FOCUS_COMMAND 和 BLUR_COMMAND 监听器
+const unregisterFocusBlurCommands = () => {
+  unregisterFocus?.();
+  unregisterBlur?.();
+  unregisterFocus = undefined;
+  unregisterBlur = undefined;
+};
+
 const initEditor = () => {
   if (!editorRef.value || !contentEditableRef.value) return;
 
@@ -216,8 +250,11 @@ const initEditor = () => {
       });
       return true;
     },
-    0, // COMMAND_PRIORITY_LOW
+    COMMAND_PRIORITY_LOW,
   );
+
+  // 注册 FOCUS_COMMAND 和 BLUR_COMMAND 监听器
+  registerFocusBlurCommands();
 
   // 初始化编辑器状态
   editor.value.update(() => {
@@ -353,27 +390,41 @@ const initEditor = () => {
   }
 
   // 自动聚焦功能（仅在非只读模式下启用）
+  // 参考 LexicalAutoFocusPlugin 的实现，只在组件挂载时执行一次
   if (props.autofocus && !props.readonly) {
     // 使用 nextTick 确保 DOM 已经渲染完成
     nextTick(() => {
-      editor.value.focus(
-        () => {
-          // If we try and move selection to the same point with setBaseAndExtent, it won't
-          // trigger a re-focus on the element. So in the case this occurs, we'll need to correct it.
-          // Normally this is fine, Selection API !== Focus API, but for the intents of the naming
-          // of this plugin, which should preserve focus too.
-          const activeElement = document.activeElement;
-          const rootElement = editor.value.getRootElement() as HTMLDivElement;
-          if (
-            rootElement !== null &&
-            (activeElement === null || !rootElement.contains(activeElement))
-          ) {
-            // Note: preventScroll won't work in Webkit.
-            rootElement.focus({preventScroll: true});
-          }
-        },
-        {defaultSelection: props.defaultSelection},
-      );
+      // 临时取消注册 focus/blur 命令，避免触发外部事件
+      unregisterFocusBlurCommands();
+      
+      try {
+        editor.value.focus(
+          () => {
+            // If we try and move selection to the same point with setBaseAndExtent, it won't
+            // trigger a re-focus on the element. So in the case this occurs, we'll need to correct it.
+            // Normally this is fine, Selection API !== Focus API, but for the intents of the naming
+            // of this plugin, which should preserve focus too.
+            const activeElement = document.activeElement;
+            const rootElement = editor.value.getRootElement() as HTMLDivElement;
+            if (
+              rootElement !== null &&
+              (activeElement === null || !rootElement.contains(activeElement))
+            ) {
+              // Note: preventScroll won't work in Webkit.
+              rootElement.focus({preventScroll: true});
+            }
+            // 在 focus 回调完成后重新注册命令
+            setTimeout(() => {
+              registerFocusBlurCommands();
+            }, 10);
+          },
+          {defaultSelection: props.defaultSelection},
+        );
+      } catch (error) {
+        // 如果出错，确保重新注册命令
+        registerFocusBlurCommands();
+        throw error;
+      }
     });
   }
 
@@ -421,13 +472,6 @@ const handleEditorClick = (event: MouseEvent) => {
   }
 };
 
-const handleEditorFocus = () => {
-  emit('focus');
-};
-
-const handleEditorBlur = () => {
-  emit('blur');
-};
 
 // 设置只读模式下的链接行为
 const setupReadonlyLinkBehavior = () => {
@@ -483,6 +527,9 @@ onUnmounted(() => {
   cleanupMarkdownShortcut?.();
   cleanupCodeActionMenu?.();
   
+  // 清理 focus/blur 命令监听器
+  unregisterFocusBlurCommands();
+  
   // 清理链接观察器
   if (contentEditableRef.value && (contentEditableRef.value as any).__linkObserver) {
     (contentEditableRef.value as any).__linkObserver.disconnect();
@@ -498,9 +545,11 @@ watch(
   (newValue) => {
     if (!editor.value) return;
     
-    const shouldSetSelection = props.autofocus && !props.readonly;
+    // 临时取消注册 focus/blur 命令，避免内部操作触发外部事件
+    // 这样 defaultValue 变化引起的所有 focus/blur 操作都不会触发外部事件
+    unregisterFocusBlurCommands();
     
-    // 直接更新编辑器内容，不需要对比
+    // 更新编辑器内容
     editor.value.update(() => {
       const root = $getRoot();
       root.clear();
@@ -513,7 +562,7 @@ watch(
       }
       
       // 如果 autofocus 为 true，在更新后设置选择位置
-      if (shouldSetSelection && root.getChildrenSize() > 0) {
+      if (props.autofocus && !props.readonly && root.getChildrenSize() > 0) {
         if (props.defaultSelection === 'rootStart') {
           root.selectStart();
         } else {
@@ -522,27 +571,63 @@ watch(
       }
     });
     
-    // 使用 nextTick 确保更新完成后再重置编辑器状态（focus 等）
-    nextTick(() => {
-      if (!props.readonly) {
-        if (props.autofocus) {
-          // 如果 autofocus 为 true，确保编辑器获得焦点
-          const rootElement = editor.value.getRootElement() as HTMLDivElement;
-          if (rootElement !== null) {
-            const activeElement = document.activeElement;
-            if (activeElement === null || !rootElement.contains(activeElement)) {
-              rootElement.focus({preventScroll: true});
-            }
-          }
-        } else {
-          // 如果 autofocus 为 false，再次确保编辑器失焦
-          const rootElement = editor.value.getRootElement();
-          if (rootElement !== null) {
+    // 统一的重新注册命令函数（在所有操作完成后调用）
+    // 使用延迟确保所有 DOM 更新和焦点操作都已完成
+    const reRegisterCommands = (delay: number = 10) => {
+      setTimeout(() => {
+        registerFocusBlurCommands();
+      }, delay);
+    };
+    
+    // 如果 autofocus 为 true，在更新完成后尝试聚焦
+    // 聚焦操作完成后才重新注册命令，确保整个过程中不会触发外部事件
+    if (props.autofocus && !props.readonly) {
+      nextTick(() => {
+        const rootElement = editor.value.getRootElement() as HTMLDivElement;
+        if (!rootElement) {
+          reRegisterCommands();
+          return;
+        }
+        
+        try {
+          editor.value.focus(
+            () => {
+              // 确保焦点正确设置
+              const activeElement = document.activeElement;
+              const rootElement = editor.value.getRootElement() as HTMLDivElement;
+              if (
+                rootElement !== null &&
+                (activeElement === null || !rootElement.contains(activeElement))
+              ) {
+                rootElement.focus({preventScroll: true});
+              }
+              // 聚焦操作完成后重新注册命令
+              reRegisterCommands();
+            },
+            {defaultSelection: props.defaultSelection},
+          );
+        } catch (error) {
+          // 出错时也要重新注册命令
+          reRegisterCommands();
+          throw error;
+        }
+      });
+    } else {
+      // 非 autofocus 模式，重置焦点状态（失焦）
+      // 等待 DOM 更新完成后再执行失焦操作
+      nextTick(() => {
+        const rootElement = editor.value.getRootElement() as HTMLDivElement;
+        if (rootElement) {
+          const activeElement = document.activeElement;
+          // 如果编辑器当前有焦点，则失焦
+          if (activeElement !== null && rootElement.contains(activeElement)) {
             rootElement.blur();
           }
         }
-      }
-    });
+        // 失焦操作完成后重新注册命令
+        reRegisterCommands(0);
+      });
+    }
   },
 );
 
@@ -567,6 +652,9 @@ watch(
       cleanupHorizontalRule?.();
       cleanupMarkdownShortcut?.();
       cleanupCodeActionMenu?.();
+      
+      // 清理 focus/blur 命令监听器
+      unregisterFocusBlurCommands();
       
       // 重置清理函数引用
       cleanupImages = undefined;

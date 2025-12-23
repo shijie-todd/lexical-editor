@@ -46,11 +46,11 @@ onMounted(() => {
 })
 
 const handleFocus = () => {
-  // console.log('编辑器获得焦点')
+  console.log('编辑器获得焦点')
 }
 
 const handleBlur = () => {
-  // console.log('编辑器失去焦点')
+  console.log('编辑器失去焦点')
 }
 
 const handleClickImg = (_url: string) => {
