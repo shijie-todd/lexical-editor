@@ -327,7 +327,7 @@ export function useComponentPickerPlugin(
       menuElement = document.createElement('div');
       menuElement.className = 'typeahead-popover component-picker-menu';
       menuElement.style.position = 'absolute';
-      menuElement.style.zIndex = '1000';
+      menuElement.style.zIndex = '9000';
       document.body.appendChild(menuElement);
     }
 

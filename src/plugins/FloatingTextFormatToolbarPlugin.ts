@@ -246,7 +246,7 @@ export function useFloatingTextFormatToolbarPlugin(
     toolbarElement.style.position = 'absolute';
     toolbarElement.style.top = '0';
     toolbarElement.style.left = '0';
-    toolbarElement.style.zIndex = '1000';
+    toolbarElement.style.zIndex = '9000';
     toolbarElement.style.opacity = '0';
     toolbarElement.style.willChange = 'transform';
     rootElement.parentElement?.appendChild(toolbarElement);

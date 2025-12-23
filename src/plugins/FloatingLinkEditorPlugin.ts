@@ -364,7 +364,7 @@ export function useFloatingLinkEditorPlugin(
     editorElement.style.position = 'absolute';
     editorElement.style.top = '0';
     editorElement.style.left = '0';
-    editorElement.style.zIndex = '1000';
+    editorElement.style.zIndex = '9000';
     editorElement.style.opacity = '0';
     editorElement.style.willChange = 'transform';
     rootElement.parentElement?.appendChild(editorElement);

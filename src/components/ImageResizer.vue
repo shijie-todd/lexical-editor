@@ -165,7 +165,7 @@ const getCursorForDirection = (direction: ResizeDirection): string => {
   border: 1px solid white;
   border-radius: 50%;
   pointer-events: auto;
-  z-index: 10;
+  z-index: 9000;
 }
 
 .handle-nw {

@@ -147,7 +147,7 @@ onUnmounted(() => {
 
 <style scoped>
 .table-action-menu-container {
-  z-index: 1000;
+  z-index: 9000;
   display: flex;
   align-items: flex-start;
   pointer-events: auto;
@@ -185,7 +185,7 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   min-width: 160px;
   padding: 4px 0;
-  z-index: 1001;
+  z-index: 9001;
 }
 
 .table-action-item {

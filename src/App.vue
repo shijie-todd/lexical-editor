@@ -6,6 +6,14 @@ const STORAGE_KEY = 'lexical-editor-content'
 
 const content = ref(``)
 
+const load1 = () => {
+  content.value = '1'
+}
+
+const load2 = () =>{
+  content.value = '2'
+}
+
 // 从 localStorage 加载内容
 const loadFromStorage = () => {
   try {
@@ -60,6 +68,18 @@ const changeReadonly = () => {
   <div style="max-width: 900px; margin: 0 auto; padding: 20px;">
     <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
       <button 
+        @click="load1" 
+        style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;"
+      >
+        加载1
+      </button>
+      <button 
+        @click="load2" 
+        style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;"
+      >
+        加载2
+      </button>
+      <button 
         @click="saveToStorage" 
         style="padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;"
       >
@@ -73,7 +93,7 @@ const changeReadonly = () => {
       </button>
     </div>
 
-    <Editor v-model="content" :readonly="readonly" @focus="handleFocus" @blur="handleBlur" @click-img="handleClickImg" @change="handleChange" />
+    <Editor v-model="content" default-selection="rootStart" :readonly="readonly" @focus="handleFocus" @blur="handleBlur" @click-img="handleClickImg" @change="handleChange" />
     
     <details style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
       <summary style="cursor: pointer; font-weight: bold;">查看 Markdown 输出</summary>

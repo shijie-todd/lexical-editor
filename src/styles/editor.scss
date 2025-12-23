@@ -315,7 +315,7 @@
   padding: 4px;
   gap: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
+  z-index: 9000;
 }
 
 .code-action-menu-container .code-highlight-language {
@@ -442,7 +442,7 @@
   border: 1px solid #ddd;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
+  z-index: 9000;
   max-height: 250px;
   overflow-y: auto;
   min-width: 200px;
@@ -498,7 +498,7 @@
   display: flex;
   opacity: 0;
   transition: opacity 0.2s;
-  z-index: 10;
+  z-index: 9000;
 }
 
 .block-menu:hover,
@@ -759,7 +759,7 @@
   font-size: 14px;
   padding: 0;
   transition: background-color 0.2s;
-  z-index: 10;
+  z-index: 9000;
   align-items: center;
   justify-content: center;
   /* display 由 JavaScript 控制 */

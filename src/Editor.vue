@@ -1,6 +1,6 @@
 <template>
   <div class="editor-container">
-    <div ref="editorRef" class="editor-scroller">
+    <div ref="editorRef" class="editor-scroller beauty-scroll">
       <!-- Placeholder -->
       <div 
         v-if="isEditorEmpty && !readonly && placeholder" 
@@ -69,10 +69,14 @@ const props = withDefaults(defineProps<{
   modelValue?: string;
   readonly?: boolean;
   placeholder?: string;
+  autofocus?: boolean;
+  defaultSelection?: 'rootStart' | 'rootEnd';
 }>(), {
   modelValue: '',
   readonly: false,
   placeholder: '输入 / 选择插入内容...',
+  autofocus: false,
+  defaultSelection: 'rootStart',
 });
 
 const emit = defineEmits<{
@@ -351,6 +355,31 @@ const initEditor = () => {
     setupReadonlyLinkBehavior();
   }
 
+  // 自动聚焦功能（仅在非只读模式下启用）
+  if (props.autofocus && !props.readonly) {
+    // 使用 nextTick 确保 DOM 已经渲染完成
+    nextTick(() => {
+      editor.value.focus(
+        () => {
+          // If we try and move selection to the same point with setBaseAndExtent, it won't
+          // trigger a re-focus on the element. So in the case this occurs, we'll need to correct it.
+          // Normally this is fine, Selection API !== Focus API, but for the intents of the naming
+          // of this plugin, which should preserve focus too.
+          const activeElement = document.activeElement;
+          const rootElement = editor.value.getRootElement() as HTMLDivElement;
+          if (
+            rootElement !== null &&
+            (activeElement === null || !rootElement.contains(activeElement))
+          ) {
+            // Note: preventScroll won't work in Webkit.
+            rootElement.focus({preventScroll: true});
+          }
+        },
+        {defaultSelection: props.defaultSelection},
+      );
+    });
+  }
+
   // 监听编辑器更新，同步到 modelValue
   editor.value.registerUpdateListener(({editorState}: {editorState: any}) => {
     editorState.read(() => {
@@ -472,6 +501,7 @@ watch(
     if (!editor.value) return;
     
     isUpdatingFromProps = true;
+    const shouldSetSelection = props.autofocus && !props.readonly;
     editor.value.update(() => {
       const root = $getRoot();
       const currentMarkdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
@@ -485,12 +515,46 @@ watch(
           const paragraph = $createParagraphNode();
           root.append(paragraph);
         }
+        
+        // 如果 autofocus 为 true，在更新后设置选择位置
+        if (shouldSetSelection && root.getChildrenSize() > 0) {
+          if (props.defaultSelection === 'rootStart') {
+            root.selectStart();
+          } else {
+            root.selectEnd();
+          }
+        }
       }
     });
     
     // 使用 nextTick 确保更新完成后再重置标志
     nextTick(() => {
       isUpdatingFromProps = false;
+      
+      if (!props.readonly) {
+        if (props.autofocus) {
+          // 如果 autofocus 为 true，确保编辑器获得焦点
+          const rootElement = editor.value.getRootElement() as HTMLDivElement;
+          if (rootElement !== null) {
+            const activeElement = document.activeElement;
+            if (activeElement === null || !rootElement.contains(activeElement)) {
+              rootElement.focus({preventScroll: true});
+            }
+          }
+        } else {
+          // 如果 autofocus 为 false，且编辑器当前是聚焦状态，则让编辑器失焦
+          const rootElement = editor.value.getRootElement();
+          const activeElement = document.activeElement;
+          if (
+            rootElement !== null &&
+            activeElement !== null &&
+            rootElement.contains(activeElement)
+          ) {
+            // 编辑器当前是聚焦状态，让它失焦
+            rootElement.blur();
+          }
+        }
+      }
     });
   },
 );
