@@ -5,6 +5,8 @@ import Editor from './Editor.vue'
 const STORAGE_KEY = 'lexical-editor-content'
 
 const content = ref(``)
+const markdownOutput = ref(``)
+const editorRef = ref<InstanceType<typeof Editor> | null>(null)
 
 const load1 = () => {
   content.value = '1'
@@ -29,7 +31,8 @@ const loadFromStorage = () => {
 // 保存内容到 localStorage
 const saveToStorage = () => {
   try {
-    localStorage.setItem(STORAGE_KEY, content.value)
+    const markdown = editorRef.value?.getMarkdown() || ''
+    localStorage.setItem(STORAGE_KEY, markdown)
     alert('保存成功！')
   } catch (error) {
     console.error('保存到本地存储失败:', error)
@@ -50,12 +53,13 @@ const handleBlur = () => {
   // console.log('编辑器失去焦点')
 }
 
-const handleClickImg = (url: string) => {
-  // console.log('点击图片:', url)
+const handleClickImg = (_url: string) => {
+  // console.log('点击图片:', _url)
 }
 
 const handleChange = (value: string) => {
-  // console.log('内容变化:', value)
+  // 更新显示的 markdown 内容
+  markdownOutput.value = value
 }
 
 const readonly = ref(false)
@@ -93,11 +97,11 @@ const changeReadonly = () => {
       </button>
     </div>
 
-    <Editor v-model="content" default-selection="rootStart" :readonly="readonly" @focus="handleFocus" @blur="handleBlur" @click-img="handleClickImg" @change="handleChange" />
+    <Editor ref="editorRef" :default-value="content" default-selection="rootEnd" :readonly="readonly" @focus="handleFocus" @blur="handleBlur" @click-img="handleClickImg" @change="handleChange" />
     
     <details style="margin-top: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px;">
       <summary style="cursor: pointer; font-weight: bold;">查看 Markdown 输出</summary>
-      <pre style="background: white; padding: 15px; border-radius: 4px; overflow-x: auto; margin-top: 10px;">{{ content }}</pre>
+      <pre style="background: white; padding: 15px; border-radius: 4px; overflow-x: auto; margin-top: 10px;">{{ markdownOutput }}</pre>
     </details>
   </div>
 </template>

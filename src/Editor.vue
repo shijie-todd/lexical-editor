@@ -66,13 +66,13 @@ import {
 import {CUSTOM_TRANSFORMERS} from './utils/markdownTransformers';
 
 const props = withDefaults(defineProps<{
-  modelValue?: string;
+  defaultValue?: string;
   readonly?: boolean;
   placeholder?: string;
   autofocus?: boolean;
   defaultSelection?: 'rootStart' | 'rootEnd';
 }>(), {
-  modelValue: '',
+  defaultValue: '',
   readonly: false,
   placeholder: '输入 / 选择插入内容...',
   autofocus: false,
@@ -80,7 +80,6 @@ const props = withDefaults(defineProps<{
 });
 
 const emit = defineEmits<{
-  'update:modelValue': [value: string];
   'focus': [];
   'blur': [];
   'click-img': [url: string];
@@ -106,8 +105,6 @@ let cleanupHorizontalRule: (() => void) | undefined;
 let cleanupCodeActionMenu: (() => void) | undefined;
 let cleanupMarkdownShortcut: (() => void) | undefined;
 
-// 用于防止循环更新的标志
-let isUpdatingFromProps = false;
 
 // 链接编辑模式状态
 const isLinkEditMode = ref(false);
@@ -227,9 +224,9 @@ const initEditor = () => {
     const root = $getRoot();
     root.clear();
     
-    // 如果提供了 modelValue（markdown），则从 markdown 转换
-    if (props.modelValue && props.modelValue.trim()) {
-      $convertFromMarkdownString(props.modelValue, CUSTOM_TRANSFORMERS, undefined, true);
+    // 如果提供了 defaultValue（markdown），则从 markdown 转换
+    if (props.defaultValue && props.defaultValue.trim()) {
+      $convertFromMarkdownString(props.defaultValue, CUSTOM_TRANSFORMERS, undefined, true);
       // 手动更新 isEditorEmpty 状态
       isEditorEmpty.value = false;
     } else {
@@ -380,7 +377,7 @@ const initEditor = () => {
     });
   }
 
-  // 监听编辑器更新，同步到 modelValue
+  // 监听编辑器更新（仅内部内容变化时触发）
   editor.value.registerUpdateListener(({editorState}: {editorState: any}) => {
     editorState.read(() => {
       const markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
@@ -388,9 +385,8 @@ const initEditor = () => {
       // 判断编辑器是否为空：检查 markdown 内容长度
       isEditorEmpty.value = markdown.trim().length === 0;
       
-      // 只读模式或正在从 props 更新时不触发 emit
-      if (!props.readonly && !isUpdatingFromProps) {
-        emit('update:modelValue', markdown);
+      // 只读模式下不触发 change 事件
+      if (!props.readonly) {
         emit('change', markdown);
       }
     });
@@ -494,43 +490,38 @@ onUnmounted(() => {
 });
 
 
-// 监听 modelValue 变化，同步到编辑器
+// 监听 defaultValue 变化（外部内容变化），重置编辑器状态
 watch(
-  () => props.modelValue,
+  () => props.defaultValue,
   (newValue) => {
     if (!editor.value) return;
     
-    isUpdatingFromProps = true;
     const shouldSetSelection = props.autofocus && !props.readonly;
+    
+    // 直接更新编辑器内容，不需要对比
     editor.value.update(() => {
       const root = $getRoot();
-      const currentMarkdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
+      root.clear();
       
-      // 只有当 markdown 内容不同时才更新，避免循环更新
-      if (currentMarkdown !== newValue) {
-        root.clear();
-        if (newValue) {
-          $convertFromMarkdownString(newValue, CUSTOM_TRANSFORMERS, undefined, true);
+      if (newValue) {
+        $convertFromMarkdownString(newValue, CUSTOM_TRANSFORMERS, undefined, true);
+      } else {
+        const paragraph = $createParagraphNode();
+        root.append(paragraph);
+      }
+      
+      // 如果 autofocus 为 true，在更新后设置选择位置
+      if (shouldSetSelection && root.getChildrenSize() > 0) {
+        if (props.defaultSelection === 'rootStart') {
+          root.selectStart();
         } else {
-          const paragraph = $createParagraphNode();
-          root.append(paragraph);
-        }
-        
-        // 如果 autofocus 为 true，在更新后设置选择位置
-        if (shouldSetSelection && root.getChildrenSize() > 0) {
-          if (props.defaultSelection === 'rootStart') {
-            root.selectStart();
-          } else {
-            root.selectEnd();
-          }
+          root.selectEnd();
         }
       }
     });
     
-    // 使用 nextTick 确保更新完成后再重置标志
+    // 使用 nextTick 确保更新完成后再重置编辑器状态（focus 等）
     nextTick(() => {
-      isUpdatingFromProps = false;
-      
       if (!props.readonly) {
         if (props.autofocus) {
           // 如果 autofocus 为 true，确保编辑器获得焦点
@@ -542,15 +533,9 @@ watch(
             }
           }
         } else {
-          // 如果 autofocus 为 false，且编辑器当前是聚焦状态，则让编辑器失焦
+          // 如果 autofocus 为 false，再次确保编辑器失焦
           const rootElement = editor.value.getRootElement();
-          const activeElement = document.activeElement;
-          if (
-            rootElement !== null &&
-            activeElement !== null &&
-            rootElement.contains(activeElement)
-          ) {
-            // 编辑器当前是聚焦状态，让它失焦
+          if (rootElement !== null) {
             rootElement.blur();
           }
         }
@@ -630,6 +615,20 @@ onMounted(() => {
   nextTick(() => {
     initEditor();
   });
+});
+
+// 暴露 getMarkdown 方法
+const getMarkdown = (): string => {
+  if (!editor.value) return '';
+  let markdown = '';
+  editor.value.getEditorState().read(() => {
+    markdown = $convertToMarkdownString(CUSTOM_TRANSFORMERS, undefined, true);
+  });
+  return markdown;
+};
+
+defineExpose({
+  getMarkdown,
 });
 </script>
 
